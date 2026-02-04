@@ -1057,6 +1057,17 @@
             const shareOfTotal = allMembersData.length > 0 ? 
                 Math.round((memberData.closingBalance / allMembersData.reduce((s, m) => s + m.closingBalance, 0)) * 100) : 0;
             
+            // Calculate missing placeholders
+            const estimatedInterest = Math.round(avgDeposit * monthsRemaining * 0.0058); // Rough interest estimate
+            const avgInterestPerMember = allMembersData.length > 0 ?
+                allMembersData.reduce((s, m) => s + (m.closingBalance * 0.0058), 0) / allMembersData.length : 0;
+            const interestAboveAvg = avgInterestPerMember > 0 ? 
+                Math.round(((memberData.totalInterest - avgInterestPerMember) / avgInterestPerMember) * 100) : 0;
+            const sortedMembers = [...allMembersData].sort((a, b) => b.closingBalance - a.closingBalance);
+            const memberRank = sortedMembers.findIndex(m => m.closingBalance === memberData.closingBalance) + 1;
+            const percentBeaten = allMembersData.length > 0 ? 
+                Math.round(((allMembersData.length - memberRank) / allMembersData.length) * 100) : 0;
+            
             // Replace all placeholders
             let text = randomMessage.text
                 .replace(/{projected}/g, `KES ${Math.round(projected).toLocaleString()}`)
@@ -1083,10 +1094,12 @@
                 .replace(/{percentAboveAvg}/g, percentAboveAvg.toString())
                 .replace(/{percentAboveMinimum}/g, percentAboveMinimum.toString())
                 .replace(/{shareOfTotal}/g, shareOfTotal.toString())
-                .replace(/{projectedInterest}/g, `KES ${Math.round(estimatedInterest).toLocaleString()}`);
+                .replace(/{projectedInterest}/g, `KES ${Math.round(estimatedInterest).toLocaleString()}`)
+                .replace(/{interestAboveAvg}/g, interestAboveAvg.toString())
+                .replace(/{percentBeaten}/g, percentBeaten.toString());
             
-            // Remove all ** markdown markers for clean display
-            text = text.replace(/\*\*/g, '');
+            // Convert **text** to <strong>text</strong> for bold display
+            text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
             
             return { icon: randomMessage.icon, text };
         }
