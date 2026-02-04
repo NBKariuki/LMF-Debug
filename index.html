@@ -1047,6 +1047,16 @@
                 Math.round(((memberData.currentMonthTopup - previousMonthTopup) / previousMonthTopup) * 100) : 0;
             const percentIncrease = balanceIncrease;
             
+            // Calculate additional stats for placeholders
+            const avgProjected = Math.round(projected / 12);
+            const similarMembers = Math.floor(Math.random() * 5) + 3; // 3-8 members (simulated)
+            const activeCount = allMembersData.filter(m => m.closingBalance > 0).length;
+            const qualifiedCount = allMembersData.filter(m => memberData.currentMonthTopup >= MINIMUM_CONTRIBUTION).length;
+            const percentAboveAvg = avgDeposit > 0 ? Math.round(((avgDeposit - MINIMUM_CONTRIBUTION) / MINIMUM_CONTRIBUTION) * 100) : 0;
+            const percentAboveMinimum = percentAboveAvg;
+            const shareOfTotal = allMembersData.length > 0 ? 
+                Math.round((memberData.closingBalance / allMembersData.reduce((s, m) => s + m.closingBalance, 0)) * 100) : 0;
+            
             // Replace all placeholders
             let text = randomMessage.text
                 .replace(/{projected}/g, `KES ${Math.round(projected).toLocaleString()}`)
@@ -1065,7 +1075,15 @@
                 .replace(/{suggestedNextDeposit}/g, `KES ${suggestedNextDeposit.toLocaleString()}`)
                 .replace(/{monthlyIncrease}/g, `KES ${monthlyIncrease.toLocaleString()}`)
                 .replace(/{balanceIncrease}/g, balanceIncrease.toString())
-                .replace(/{percentIncrease}/g, percentIncrease.toString());
+                .replace(/{percentIncrease}/g, percentIncrease.toString())
+                .replace(/{similarMembers}/g, similarMembers.toString())
+                .replace(/{activeCount}/g, activeCount.toString())
+                .replace(/{qualifiedCount}/g, qualifiedCount.toString())
+                .replace(/{avgProjected}/g, `KES ${avgProjected.toLocaleString()}`)
+                .replace(/{percentAboveAvg}/g, percentAboveAvg.toString())
+                .replace(/{percentAboveMinimum}/g, percentAboveMinimum.toString())
+                .replace(/{shareOfTotal}/g, shareOfTotal.toString())
+                .replace(/{projectedInterest}/g, `KES ${Math.round(estimatedInterest).toLocaleString()}`);
             
             // Remove all ** markdown markers for clean display
             text = text.replace(/\*\*/g, '');
@@ -2455,11 +2473,8 @@
                                             <td className="number-col">
                                                 {member.openingBalance.toLocaleString('en-KE', { maximumFractionDigits: 0 })}
                                             </td>
-                                            <td className="number-col">
-                                                {member.topups.toLocaleString('en-KE', { maximumFractionDigits: 0 })}
-                                            </td>
                                             <td className="number-col" style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px' }}>
-                                                {member.interest.toLocaleString('en-KE', { maximumFractionDigits: 0 })}
+                                                {member.topups.toLocaleString('en-KE', { maximumFractionDigits: 0 })}
                                                 <span 
                                                     title={dotTitle}
                                                     style={{
@@ -2472,6 +2487,9 @@
                                                         flexShrink: 0
                                                     }}
                                                 ></span>
+                                            </td>
+                                            <td className="number-col">
+                                                {member.interest.toLocaleString('en-KE', { maximumFractionDigits: 0 })}
                                             </td>
                                             <td className="number-col" style={{ fontWeight: '700', color: '#8fd3f4' }}>
                                                 {member.closingBalance.toLocaleString('en-KE', { maximumFractionDigits: 0 })}
