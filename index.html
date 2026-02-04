@@ -1259,6 +1259,29 @@
             }} />;
         }
 
+        // ERROR BOUNDARY FOR CHARTS
+        class ErrorBoundary extends React.Component {
+            constructor(props) {
+                super(props);
+                this.state = { hasError: false };
+            }
+
+            static getDerivedStateFromError(error) {
+                return { hasError: true };
+            }
+
+            componentDidCatch(error, errorInfo) {
+                console.error('Chart error:', error, errorInfo);
+            }
+
+            render() {
+                if (this.state.hasError) {
+                    return null; // Silently fail, don't show chart
+                }
+                return this.props.children;
+            }
+        }
+
         // SITE TOUR COMPONENT
         function SiteTour({ onDone, openSidebar, closeSidebar, onSidebarStepChange }) {
             const [step, setStep] = useState(0);
@@ -2224,11 +2247,13 @@
 
                     {/* PERSONALIZED PROJECTION CHART - Only when alias selected */}
                     {selectedAlias && (
-                        <MemberProjectionChart 
-                            selectedAlias={selectedAlias}
-                            data={data}
-                            currentMonth={month}
-                        />
+                        <ErrorBoundary>
+                            <MemberProjectionChart 
+                                selectedAlias={selectedAlias}
+                                data={data}
+                                currentMonth={month}
+                            />
+                        </ErrorBoundary>
                     )}
 
                     {/* GROUP SUMMARY - Only when NO alias selected (landing page) */}
@@ -2452,7 +2477,9 @@
                         All Members - {month} {CURRENT_YEAR}
                     </h2>
 
-                    <GroupBalanceChart data={data} currentMonth={month} />
+                    <ErrorBoundary>
+                        <GroupBalanceChart data={data} currentMonth={month} />
+                    </ErrorBoundary>
 
                     <div className="members-table-container">
                         <table className="members-table">
