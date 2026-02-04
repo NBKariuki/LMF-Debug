@@ -405,6 +405,7 @@
         .members-table-container {
             overflow-x: auto;
             margin: 20px 0;
+            margin-bottom: 80px;
         }
 
         .members-table {
@@ -1960,6 +1961,7 @@
                         border: '1px solid rgba(132, 250, 176, 0.3)',
                         borderRadius: '12px',
                         padding: '16px 18px',
+                        marginBottom: '80px',
                         display: 'flex',
                         alignItems: 'flex-start',
                         gap: '12px'
@@ -2342,22 +2344,23 @@
                                             <td className="number-col">
                                                 {member.openingBalance.toLocaleString('en-KE', { maximumFractionDigits: 0 })}
                                             </td>
+                                            <td className="number-col">
+                                                {member.topups.toLocaleString('en-KE', { maximumFractionDigits: 0 })}
+                                            </td>
                                             <td className="number-col" style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px' }}>
+                                                {member.interest.toLocaleString('en-KE', { maximumFractionDigits: 0 })}
                                                 <span 
                                                     title={dotTitle}
                                                     style={{
                                                         display: 'inline-block',
-                                                        width: '8px',
-                                                        height: '8px',
+                                                        width: '10px',
+                                                        height: '10px',
                                                         borderRadius: '50%',
                                                         backgroundColor: dotColor,
-                                                        cursor: 'help'
+                                                        cursor: 'help',
+                                                        flexShrink: 0
                                                     }}
                                                 ></span>
-                                                {member.topups.toLocaleString('en-KE', { maximumFractionDigits: 0 })}
-                                            </td>
-                                            <td className="number-col">
-                                                {member.interest.toLocaleString('en-KE', { maximumFractionDigits: 0 })}
                                             </td>
                                             <td className="number-col" style={{ fontWeight: '700', color: '#8fd3f4' }}>
                                                 {member.closingBalance.toLocaleString('en-KE', { maximumFractionDigits: 0 })}
