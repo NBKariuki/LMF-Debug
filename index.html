@@ -1008,91 +1008,103 @@
         }
 
         function formatArchetypeMessage(archetype, memberData, allMembersData, currentMonth) {
-            const messages = ARCHETYPE_MESSAGES[archetype] || ARCHETYPE_MESSAGES.STEADY_CLIMBER;
-            
-            // For trend archetypes in January, filter out messages mentioning previous month
-            let availableMessages = messages;
-            const monthIndex = MONTHS.indexOf(currentMonth);
-            if (monthIndex === 0) {
-                const trendArchetypes = ['LATE_BLOOMER', 'ACCELERATOR', 'DECELERATOR', 'VOLATILE'];
-                if (trendArchetypes.includes(archetype)) {
-                    availableMessages = messages.filter(msg => 
-                        !msg.text.includes('{previousMonthTopup}') && 
-                        !msg.text.includes('{previousInterest}')
-                    );
-                    // If all messages filtered out, use STEADY_CLIMBER instead
-                    if (availableMessages.length === 0) {
-                        availableMessages = ARCHETYPE_MESSAGES.STEADY_CLIMBER;
+            try {
+                const messages = ARCHETYPE_MESSAGES[archetype] || ARCHETYPE_MESSAGES.STEADY_CLIMBER;
+                
+                // For trend archetypes in January, filter out messages mentioning previous month
+                let availableMessages = messages;
+                const monthIndex = MONTHS.indexOf(currentMonth);
+                if (monthIndex === 0) {
+                    const trendArchetypes = ['LATE_BLOOMER', 'ACCELERATOR', 'DECELERATOR', 'VOLATILE'];
+                    if (trendArchetypes.includes(archetype)) {
+                        availableMessages = messages.filter(msg => 
+                            !msg.text.includes('{previousMonthTopup}') && 
+                            !msg.text.includes('{previousInterest}')
+                        );
+                        // If all messages filtered out, use STEADY_CLIMBER instead
+                        if (availableMessages.length === 0) {
+                            availableMessages = ARCHETYPE_MESSAGES.STEADY_CLIMBER;
+                        }
                     }
                 }
+                
+                const randomMessage = availableMessages[Math.floor(Math.random() * availableMessages.length)];
+                
+                const monthsElapsed = monthIndex + 1;
+                const monthsRemaining = 12 - monthsElapsed;
+                const avgDeposit = monthsElapsed > 0 ? (memberData.totalTopups || 0) / monthsElapsed : 0;
+                const projected = (memberData.closingBalance || 0) + (avgDeposit * monthsRemaining);
+                const stretchGoal = (memberData.closingBalance || 0) + ((avgDeposit * 1.5) * monthsRemaining);
+                const suggestedNextDeposit = Math.round((memberData.currentMonthTopup || 0) * 1.2);
+                const monthlyIncrease = Math.round(avgDeposit * 0.5);
+                
+                // Calculate previous month values
+                const previousMonthIndex = monthIndex - 1;
+                const previousMonthTopup = previousMonthIndex >= 0 && memberData.previousMonthTopup ? memberData.previousMonthTopup : 0;
+                const previousInterest = previousMonthIndex >= 0 && memberData.previousInterest ? memberData.previousInterest : 0;
+                
+                // Calculate percentage increases
+                const balanceIncrease = previousMonthTopup > 0 ? 
+                    Math.round(((memberData.currentMonthTopup - previousMonthTopup) / previousMonthTopup) * 100) : 0;
+                const percentIncrease = balanceIncrease;
+                
+                // Calculate estimated future interest
+                const estimatedInterest = ((memberData.closingBalance || 0) + (avgDeposit * monthsRemaining)) * ETICA_MONTHLY_YIELD * monthsRemaining;
+                
+                // Calculate additional stats for placeholders
+                const avgProjected = Math.round(projected / 12);
+                const similarMembers = Math.floor(Math.random() * 5) + 3; // 3-8 members (simulated)
+                const activeCount = allMembersData.filter(m => m.closingBalance > 0).length;
+                const qualifiedCount = allMembersData.filter(m => (memberData.currentMonthTopup || 0) >= MINIMUM_CONTRIBUTION).length;
+                const percentAboveAvg = avgDeposit > 0 ? Math.round(((avgDeposit - MINIMUM_CONTRIBUTION) / MINIMUM_CONTRIBUTION) * 100) : 0;
+                const percentAboveMinimum = percentAboveAvg;
+                const shareOfTotal = allMembersData.length > 0 ? 
+                    Math.round(((memberData.closingBalance || 0) / allMembersData.reduce((s, m) => s + (m.closingBalance || 0), 0)) * 100) : 0;
+                
+                // For GHOST members (zero balance) - calculate what they could have if starting now
+                const lateStartProjection = MINIMUM_CONTRIBUTION * monthsRemaining + (MINIMUM_CONTRIBUTION * monthsRemaining * ETICA_MONTHLY_YIELD * (monthsRemaining / 2));
+                
+                // Replace all placeholders
+                let text = randomMessage.text
+                    .replace(/{projected}/g, `KES ${Math.round(projected).toLocaleString()}`)
+                    .replace(/{stretchGoal}/g, `KES ${Math.round(stretchGoal).toLocaleString()}`)
+                    .replace(/{totalTopups}/g, `KES ${(memberData.totalTopups || 0).toLocaleString()}`)
+                    .replace(/{currentMonthTopup}/g, `KES ${(memberData.currentMonthTopup || 0).toLocaleString()}`)
+                    .replace(/{previousMonthTopup}/g, `KES ${previousMonthTopup.toLocaleString()}`)
+                    .replace(/{interest}/g, `KES ${(memberData.totalInterest || 0).toLocaleString()}`)
+                    .replace(/{currentInterest}/g, `KES ${(memberData.currentInterest || 0).toLocaleString()}`)
+                    .replace(/{previousInterest}/g, `KES ${previousInterest.toLocaleString()}`)
+                    .replace(/{avgDeposit}/g, `KES ${Math.round(avgDeposit).toLocaleString()}`)
+                    .replace(/{monthsLeft}/g, monthsRemaining.toString())
+                    .replace(/{minimum}/g, `KES ${MINIMUM_CONTRIBUTION.toLocaleString()}`)
+                    .replace(/{gapToMinimum}/g, `KES ${Math.max(0, MINIMUM_CONTRIBUTION - (memberData.currentMonthTopup || 0)).toLocaleString()}`)
+                    .replace(/{currentBalance}/g, `KES ${(memberData.closingBalance || 0).toLocaleString()}`)
+                    .replace(/{suggestedNextDeposit}/g, `KES ${suggestedNextDeposit.toLocaleString()}`)
+                    .replace(/{monthlyIncrease}/g, `KES ${monthlyIncrease.toLocaleString()}`)
+                    .replace(/{balanceIncrease}/g, balanceIncrease.toString())
+                    .replace(/{percentIncrease}/g, percentIncrease.toString())
+                    .replace(/{similarMembers}/g, similarMembers.toString())
+                    .replace(/{activeCount}/g, activeCount.toString())
+                    .replace(/{qualifiedCount}/g, qualifiedCount.toString())
+                    .replace(/{avgProjected}/g, `KES ${avgProjected.toLocaleString()}`)
+                    .replace(/{percentAboveAvg}/g, percentAboveAvg.toString())
+                    .replace(/{percentAboveMinimum}/g, percentAboveMinimum.toString())
+                    .replace(/{shareOfTotal}/g, shareOfTotal.toString())
+                    .replace(/{projectedInterest}/g, `KES ${Math.round(estimatedInterest).toLocaleString()}`)
+                    .replace(/{lateStartProjection}/g, `KES ${Math.round(lateStartProjection).toLocaleString()}`);
+                
+                // Remove all ** markdown markers for clean display
+                text = text.replace(/\*\*/g, '');
+                
+                return { icon: randomMessage.icon, text };
+            } catch (error) {
+                console.error('Error formatting archetype message:', error);
+                // Return safe fallback
+                return { 
+                    icon: '📊', 
+                    text: `You're on track for KES ${Math.round((memberData.closingBalance || 0) + 40000).toLocaleString()} by December. Keep going!` 
+                };
             }
-            
-            const randomMessage = availableMessages[Math.floor(Math.random() * availableMessages.length)];
-            
-            const monthsElapsed = monthIndex + 1;
-            const monthsRemaining = 12 - monthsElapsed;
-            const avgDeposit = monthsElapsed > 0 ? memberData.totalTopups / monthsElapsed : 0;
-            const projected = memberData.closingBalance + (avgDeposit * monthsRemaining);
-            const stretchGoal = memberData.closingBalance + ((avgDeposit * 1.5) * monthsRemaining);
-            const suggestedNextDeposit = Math.round(memberData.currentMonthTopup * 1.2);
-            const monthlyIncrease = Math.round(avgDeposit * 0.5);
-            
-            // Calculate previous month values
-            const previousMonthIndex = monthIndex - 1;
-            const previousMonthTopup = previousMonthIndex >= 0 && memberData.previousMonthTopup ? memberData.previousMonthTopup : 0;
-            const previousInterest = previousMonthIndex >= 0 && memberData.previousInterest ? memberData.previousInterest : 0;
-            
-            // Calculate percentage increases
-            const balanceIncrease = previousMonthTopup > 0 ? 
-                Math.round(((memberData.currentMonthTopup - previousMonthTopup) / previousMonthTopup) * 100) : 0;
-            const percentIncrease = balanceIncrease;
-            
-            // Calculate additional stats for placeholders
-            const avgProjected = Math.round(projected / 12);
-            const similarMembers = Math.floor(Math.random() * 5) + 3; // 3-8 members (simulated)
-            const activeCount = allMembersData.filter(m => m.closingBalance > 0).length;
-            const qualifiedCount = allMembersData.filter(m => memberData.currentMonthTopup >= MINIMUM_CONTRIBUTION).length;
-            const percentAboveAvg = avgDeposit > 0 ? Math.round(((avgDeposit - MINIMUM_CONTRIBUTION) / MINIMUM_CONTRIBUTION) * 100) : 0;
-            const percentAboveMinimum = percentAboveAvg;
-            const shareOfTotal = allMembersData.length > 0 ? 
-                Math.round((memberData.closingBalance / allMembersData.reduce((s, m) => s + m.closingBalance, 0)) * 100) : 0;
-            
-            // For GHOST members (zero balance) - calculate what they could have if starting now
-            const lateStartProjection = MINIMUM_CONTRIBUTION * monthsRemaining + (MINIMUM_CONTRIBUTION * monthsRemaining * ETICA_MONTHLY_YIELD * (monthsRemaining / 2));
-            
-            // Replace all placeholders
-            let text = randomMessage.text
-                .replace(/{projected}/g, `KES ${Math.round(projected).toLocaleString()}`)
-                .replace(/{stretchGoal}/g, `KES ${Math.round(stretchGoal).toLocaleString()}`)
-                .replace(/{totalTopups}/g, `KES ${memberData.totalTopups.toLocaleString()}`)
-                .replace(/{currentMonthTopup}/g, `KES ${memberData.currentMonthTopup.toLocaleString()}`)
-                .replace(/{previousMonthTopup}/g, `KES ${previousMonthTopup.toLocaleString()}`)
-                .replace(/{interest}/g, `KES ${memberData.totalInterest.toLocaleString()}`)
-                .replace(/{currentInterest}/g, `KES ${memberData.currentInterest.toLocaleString()}`)
-                .replace(/{previousInterest}/g, `KES ${previousInterest.toLocaleString()}`)
-                .replace(/{avgDeposit}/g, `KES ${Math.round(avgDeposit).toLocaleString()}`)
-                .replace(/{monthsLeft}/g, monthsRemaining.toString())
-                .replace(/{minimum}/g, `KES ${MINIMUM_CONTRIBUTION.toLocaleString()}`)
-                .replace(/{gapToMinimum}/g, `KES ${Math.max(0, MINIMUM_CONTRIBUTION - memberData.currentMonthTopup).toLocaleString()}`)
-                .replace(/{currentBalance}/g, `KES ${memberData.closingBalance.toLocaleString()}`)
-                .replace(/{suggestedNextDeposit}/g, `KES ${suggestedNextDeposit.toLocaleString()}`)
-                .replace(/{monthlyIncrease}/g, `KES ${monthlyIncrease.toLocaleString()}`)
-                .replace(/{balanceIncrease}/g, balanceIncrease.toString())
-                .replace(/{percentIncrease}/g, percentIncrease.toString())
-                .replace(/{similarMembers}/g, similarMembers.toString())
-                .replace(/{activeCount}/g, activeCount.toString())
-                .replace(/{qualifiedCount}/g, qualifiedCount.toString())
-                .replace(/{avgProjected}/g, `KES ${avgProjected.toLocaleString()}`)
-                .replace(/{percentAboveAvg}/g, percentAboveAvg.toString())
-                .replace(/{percentAboveMinimum}/g, percentAboveMinimum.toString())
-                .replace(/{shareOfTotal}/g, shareOfTotal.toString())
-                .replace(/{projectedInterest}/g, `KES ${Math.round(estimatedInterest).toLocaleString()}`)
-                .replace(/{lateStartProjection}/g, `KES ${Math.round(lateStartProjection).toLocaleString()}`);
-            
-            // Remove all ** markdown markers for clean display
-            text = text.replace(/\*\*/g, '');
-            
-            return { icon: randomMessage.icon, text };
         }
 
         // Password Screen Component
