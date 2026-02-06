@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>LMF - Contribution Tracker</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%23302b63%22/><rect x=%225%22 y=%225%22 width=%2290%22 height=%2290%22 rx=%2215%22 fill=%22none%22 stroke=%22%2384fab0%22 stroke-width=%223%22/><text x=%2250%22 y=%2265%22 font-family=%22Arial,sans-serif%22 font-size=%2236%22 font-weight=%22700%22 fill=%22%2384fab0%22 text-anchor=%22middle%22>LMF</text></svg>">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            font-size: 12px;
+            line-height: 1.3;
+            overflow: hidden;
+            background: #fff;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+            color: white;
+            padding: 15px;
+            text-align: center;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+        
+        .header h1 {
+            font-size: 1.3rem;
+            font-weight: 700;
+            background: linear-gradient(120deg, #84fab0 0%, #8fd3f4 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 5px;
+        }
+        
+        .header-subtitle {
+            font-size: 0.75rem;
+            color: rgba(255, 255, 255, 0.7);
+            font-weight: 500;
+        }
+        
+        #loading {
+            padding: 20px;
+            text-align: center;
+            color: #666;
+            margin-top: 100px;
+        }
+        
+        #error {
+            padding: 20px;
+            color: #d32f2f;
+            display: none;
+            margin-top: 100px;
+            text-align: center;
+        }
+        
+        .table-container {
+            width: 100vw;
+            height: calc(100vh - 90px);
+            overflow: auto;
+            margin-top: 90px;
+            -webkit-overflow-scrolling: touch;
+        }
+        
+        table {
+            border-collapse: collapse;
+            width: max-content;
+            font-size: 11px;
+        }
+        
+        th, td {
+            padding: 4px 3px;
+            text-align: center;
+            border: 0.5px solid #d0d0d0;
+            white-space: nowrap;
+            font-size: 11px;
+        }
+        
+        /* First three columns - frozen and compact */
+        th:nth-child(1),
+        td:nth-child(1) {
+            position: sticky;
+            left: 0;
+            background: #fafafa;
+            z-index: 5;
+            text-align: left;
+            width: auto;
+            min-width: 30px;
+            max-width: 5vw;
+            font-size: 11px;
+            padding: 4px 3px;
+        }
+        
+        th:nth-child(2),
+        td:nth-child(2) {
+            position: sticky;
+            left: var(--col1-width, 5vw);
+            background: #fafafa;
+            z-index: 5;
+            text-align: left;
+            width: auto;
+            min-width: 80px;
+            max-width: 16vw;
+            font-size: 11px;
+            padding: 4px 3px;
+            white-space: normal;
+            word-wrap: break-word;
+            line-height: 1.3;
+        }
+        
+        th:nth-child(3),
+        td:nth-child(3) {
+            position: sticky;
+            left: var(--col2-width, 21vw);
+            background: #fafafa;
+            z-index: 5;
+            text-align: right;
+            width: auto;
+            min-width: 80px;
+            max-width: calc(33.33vw - var(--col1-width, 5vw) - var(--col2-width, 21vw) + 5vw + 16vw);
+            font-size: 11px;
+            font-weight: bold;
+            padding: 4px 3px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        /* Header rows sticky */
+        thead tr th {
+            position: sticky;
+            background: #f5f5f5;
+            font-weight: 600;
+            z-index: 10;
+        }
+        
+        /* First three column headers higher z-index */
+        thead tr th:nth-child(1),
+        thead tr th:nth-child(2),
+        thead tr th:nth-child(3) {
+            z-index: 15;
+            background: #fafafa;
+        }
+        
+        /* Row 1 - Week numbers */
+        thead tr:nth-child(1) th {
+            top: 0;
+            font-size: 10px;
+            padding: 4px 3px;
+        }
+        
+        /* Row 2 - Months (merged cells) */
+        thead tr:nth-child(2) th {
+            top: 24px;
+            font-size: 10px;
+            font-weight: 600;
+            padding: 4px 3px;
+        }
+        
+        /* Row 3 - Dates with wrapping */
+        thead tr:nth-child(3) th {
+            top: 48px;
+            white-space: normal;
+            word-wrap: break-word;
+            font-size: 10px;
+            line-height: 1.2;
+            padding: 4px 2px;
+            height: 36px;
+            vertical-align: middle;
+            background: #00423e !important;
+            color: white;
+        }
+        
+        /* Date row - first three columns also get the color */
+        thead tr:nth-child(3) th:nth-child(1),
+        thead tr:nth-child(3) th:nth-child(2),
+        thead tr:nth-child(3) th:nth-child(3) {
+            background: #00423e !important;
+        }
+        
+        /* Banded rows - alternating colors */
+        tbody tr:nth-child(even) td {
+            background-color: #dce6f1;
+        }
+        
+        tbody tr:nth-child(odd) td {
+            background-color: #f9f9f9;
+        }
+        
+        /* Apply banded colors to frozen columns too */
+        tbody tr:nth-child(even) td:nth-child(1),
+        tbody tr:nth-child(even) td:nth-child(2),
+        tbody tr:nth-child(even) td:nth-child(3) {
+            background-color: #dce6f1;
+        }
+        
+        tbody tr:nth-child(odd) td:nth-child(1),
+        tbody tr:nth-child(odd) td:nth-child(2),
+        tbody tr:nth-child(odd) td:nth-child(3) {
+            background-color: #f9f9f9;
+        }
+        
+        /* Number alignment and formatting */
+        td.number {
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+        }
+        
+        /* TOTAL row styling */
+        tbody tr.total-row td {
+            background: #002351 !important;
+            color: white;
+            font-weight: bold;
+            font-size: 12px;
+        }
+        
+        /* Compact data columns */
+        th:not(:nth-child(1)):not(:nth-child(2)):not(:nth-child(3)),
+        td:not(:nth-child(1)):not(:nth-child(2)):not(:nth-child(3)) {
+            min-width: 50px;
+            max-width: 65px;
+            font-size: 11px;
+            padding: 4px 3px;
+        }
+        
+        /* Loading spinner */
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #84fab0;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .refresh-hint {
+            text-align: center;
+            padding: 10px;
+            color: #666;
+            font-size: 0.8rem;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📊 Contribution Tracker</h1>
+        <div class="header-subtitle">Like-Minded Folks - MMF Group</div>
+    </div>
+    
+    <div id="loading">
+        <div class="spinner"></div>
+        <p>Loading contribution data...</p>
+    </div>
+    <div id="error"></div>
+    <div id="tableContainer" class="table-container" style="display: none;"></div>
+
+    <script>
+        // Google Sheets CSV URL - same as the original
+        const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQfQdBVl01cxsIoGnfJLltGDuOkIVDFqj-rNg3KwFVZ8-GGbUqk1DSs_CVaygisjaLhg30g1gjzIsdC/pub?gid=2079453016&single=true&output=csv';
+        
+        function parseCSV(text) {
+            const rows = [];
+            let currentRow = [];
+            let currentCell = '';
+            let inQuotes = false;
+            
+            for (let i = 0; i < text.length; i++) {
+                const char = text[i];
+                const nextChar = text[i + 1];
+                
+                if (char === '"') {
+                    if (inQuotes && nextChar === '"') {
+                        currentCell += '"';
+                        i++;
+                    } else {
+                        inQuotes = !inQuotes;
+                    }
+                } else if (char === ',' && !inQuotes) {
+                    currentRow.push(currentCell);
+                    currentCell = '';
+                } else if (char === '\n' && !inQuotes) {
+                    currentRow.push(currentCell);
+                    if (currentRow.some(cell => cell.trim())) {
+                        rows.push(currentRow);
+                    }
+                    currentRow = [];
+                    currentCell = '';
+                    if (nextChar === '\r') i++;
+                } else if (char === '\r' && nextChar === '\n' && !inQuotes) {
+                    currentRow.push(currentCell);
+                    if (currentRow.some(cell => cell.trim())) {
+                        rows.push(currentRow);
+                    }
+                    currentRow = [];
+                    currentCell = '';
+                    i++;
+                } else {
+                    currentCell += char;
+                }
+            }
+            
+            if (currentCell || currentRow.length > 0) {
+                currentRow.push(currentCell);
+                if (currentRow.some(cell => cell.trim())) {
+                    rows.push(currentRow);
+                }
+            }
+            
+            return rows;
+        }
+        
+        function isNumeric(value) {
+            if (!value || typeof value !== 'string') return false;
+            const cleaned = value.replace(/,/g, '');
+            return /^-?\d+\.?\d*$/.test(cleaned);
+        }
+        
+        function formatNumber(value) {
+            const num = parseFloat(value.replace(/,/g, ''));
+            if (isNaN(num)) return value;
+            return Math.round(num).toLocaleString('en-US');
+        }
+        
+        function createTable(data) {
+            if (!data || data.length < 5) {
+                throw new Error('Not enough data found');
+            }
+            
+            // Skip first 4 rows
+            // Row 5 (index 4) = Week numbers
+            // Row 6 (index 5) = Months
+            // Row 7 (index 6) = Dates
+            const weekRow = data[4];
+            const monthRow = data[5];
+            const dateRow = data[6];
+            const dataRows = data.slice(7).filter(row => row.some(cell => cell && cell.trim()));
+            
+            const table = document.createElement('table');
+            const thead = document.createElement('thead');
+            const tbody = document.createElement('tbody');
+            
+            // Create week number row
+            const weekTr = document.createElement('tr');
+            const blankWeek1 = document.createElement('th');
+            const blankWeek2 = document.createElement('th');
+            const blankWeek3 = document.createElement('th');
+            blankWeek3.textContent = 'WEEK NO.';
+            blankWeek3.style.color = 'black';
+            blankWeek3.style.fontWeight = 'bold';
+            weekTr.appendChild(blankWeek1);
+            weekTr.appendChild(blankWeek2);
+            weekTr.appendChild(blankWeek3);
+            
+            for (let i = 3; i < weekRow.length; i++) {
+                const th = document.createElement('th');
+                th.textContent = weekRow[i] || '';
+                weekTr.appendChild(th);
+            }
+            thead.appendChild(weekTr);
+            
+            // Create month row with merged cells
+            const monthTr = document.createElement('tr');
+            const blankMonth1 = document.createElement('th');
+            const blankMonth2 = document.createElement('th');
+            const blankMonth3 = document.createElement('th');
+            blankMonth3.textContent = 'MONTH';
+            blankMonth3.style.color = 'black';
+            blankMonth3.style.fontWeight = 'bold';
+            monthTr.appendChild(blankMonth1);
+            monthTr.appendChild(blankMonth2);
+            monthTr.appendChild(blankMonth3);
+            
+            // Track merged month cells
+            let i = 3;
+            while (i < monthRow.length) {
+                const monthValue = monthRow[i] || '';
+                let colspan = 1;
+                
+                while (i + colspan < monthRow.length && monthRow[i + colspan] === monthValue) {
+                    colspan++;
+                }
+                
+                const th = document.createElement('th');
+                th.textContent = monthValue;
+                if (colspan > 1) {
+                    th.setAttribute('colspan', colspan);
+                }
+                monthTr.appendChild(th);
+                
+                i += colspan;
+            }
+            thead.appendChild(monthTr);
+            
+            // Create date row
+            const dateTr = document.createElement('tr');
+            const blankDate1 = document.createElement('th');
+            const blankDate2 = document.createElement('th');
+            const blankDate3 = document.createElement('th');
+            blankDate3.textContent = 'TOTAL';
+            blankDate3.style.color = 'white';
+            blankDate3.style.fontWeight = 'bold';
+            dateTr.appendChild(blankDate1);
+            dateTr.appendChild(blankDate2);
+            dateTr.appendChild(blankDate3);
+            
+            for (let i = 3; i < dateRow.length; i++) {
+                const th = document.createElement('th');
+                th.textContent = dateRow[i] || '';
+                dateTr.appendChild(th);
+            }
+            thead.appendChild(dateTr);
+            
+            // Create data rows
+            dataRows.forEach(row => {
+                const tr = document.createElement('tr');
+                
+                // Check if this is a TOTAL row
+                const isTotal = (row[0] && row[0].toUpperCase().includes('TOTAL')) || 
+                               (row[1] && row[1].toUpperCase().includes('TOTAL'));
+                if (isTotal) {
+                    tr.classList.add('total-row');
+                }
+                
+                for (let i = 0; i < Math.max(row.length, weekRow.length); i++) {
+                    const td = document.createElement('td');
+                    let value = row[i] || '';
+                    
+                    // Column 1 - text only
+                    if (i === 0) {
+                        td.textContent = value;
+                    } 
+                    // Column 2 - text with wrapping after "/"
+                    else if (i === 1) {
+                        if (value.includes('/')) {
+                            value = value.replace('/', '/\n');
+                        }
+                        td.textContent = value;
+                        td.style.whiteSpace = 'pre-line';
+                    }
+                    // Column 3 - numbers with commas, no decimals, bold, right-aligned
+                    else if (i === 2) {
+                        if (isNumeric(value)) {
+                            td.textContent = formatNumber(value);
+                        } else {
+                            td.textContent = value;
+                        }
+                    }
+                    // Other columns - check if numeric
+                    else {
+                        if (isNumeric(value)) {
+                            td.textContent = formatNumber(value);
+                            td.classList.add('number');
+                        } else {
+                            td.textContent = value;
+                        }
+                    }
+                    
+                    tr.appendChild(td);
+                }
+                tbody.appendChild(tr);
+            });
+            
+            table.appendChild(thead);
+            table.appendChild(tbody);
+            
+            const container = document.getElementById('tableContainer');
+            container.innerHTML = '';
+            container.appendChild(table);
+            container.style.display = 'block';
+            document.getElementById('loading').style.display = 'none';
+            
+            // Calculate dynamic widths for first three columns
+            setTimeout(() => {
+                const col1Cells = table.querySelectorAll('td:nth-child(1), th:nth-child(1)');
+                const col2Cells = table.querySelectorAll('td:nth-child(2), th:nth-child(2)');
+                const col3Cells = table.querySelectorAll('td:nth-child(3), th:nth-child(3)');
+                
+                let maxCol1 = 0;
+                let maxCol2 = 0;
+                let maxCol3 = 0;
+                
+                col1Cells.forEach(cell => maxCol1 = Math.max(maxCol1, cell.scrollWidth));
+                col2Cells.forEach(cell => maxCol2 = Math.max(maxCol2, cell.scrollWidth));
+                col3Cells.forEach(cell => maxCol3 = Math.max(maxCol3, cell.scrollWidth));
+                
+                // Add some padding
+                maxCol1 += 8;
+                maxCol2 += 8;
+                maxCol3 += 8;
+                
+                // Ensure total doesn't exceed 33.33vw
+                const maxTotal = window.innerWidth * 0.3333;
+                const total = maxCol1 + maxCol2 + maxCol3;
+                
+                if (total > maxTotal) {
+                    const scale = maxTotal / total;
+                    maxCol1 *= scale;
+                    maxCol2 *= scale;
+                    maxCol3 *= scale;
+                }
+                
+                // Set the widths
+                col1Cells.forEach(cell => cell.style.width = maxCol1 + 'px');
+                col2Cells.forEach(cell => {
+                    cell.style.width = maxCol2 + 'px';
+                    cell.style.left = maxCol1 + 'px';
+                });
+                col3Cells.forEach(cell => {
+                    cell.style.width = maxCol3 + 'px';
+                    cell.style.left = (maxCol1 + maxCol2) + 'px';
+                });
+            }, 100);
+        }
+        
+        async function loadData() {
+            try {
+                const response = await fetch(CSV_URL);
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch: ${response.status} ${response.statusText}`);
+                }
+                
+                const text = await response.text();
+                const data = parseCSV(text);
+                createTable(data);
+            } catch (error) {
+                console.error('Error loading data:', error);
+                document.getElementById('loading').style.display = 'none';
+                const errorDiv = document.getElementById('error');
+                errorDiv.innerHTML = `
+                    <div style="padding: 20px;">
+                        <p style="margin-bottom: 10px; font-weight: bold;">⚠️ Error loading data</p>
+                        <p style="margin-bottom: 15px; font-size: 0.9rem;">${error.message}</p>
+                        <p class="refresh-hint">Pull down to refresh the page</p>
+                    </div>
+                `;
+                errorDiv.style.display = 'block';
+            }
+        }
+        
+        // Load data on page load
+        loadData();
+        
+        // Pull-to-refresh functionality for mobile
+        let touchStartY = 0;
+        let touchEndY = 0;
+        
+        document.addEventListener('touchstart', e => {
+            touchStartY = e.changedTouches[0].screenY;
+        }, { passive: true });
+        
+        document.addEventListener('touchend', e => {
+            touchEndY = e.changedTouches[0].screenY;
+            const container = document.getElementById('tableContainer');
+            
+            // If scrolled to top and pulled down more than 50px, refresh
+            if (container.scrollTop === 0 && touchEndY > touchStartY + 50) {
+                location.reload();
+            }
+        }, { passive: true });
+    </script>
+</body>
+</html>
