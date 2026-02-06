@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>LMF - Contribution Tracker</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%23302b63%22/><rect x=%225%22 y=%225%22 width=%2290%22 height=%2290%22 rx=%2215%22 fill=%22none%22 stroke=%22%2384fab0%22 stroke-width=%223%22/><text x=%2250%22 y=%2265%22 font-family=%22Arial,sans-serif%22 font-size=%2236%22 font-weight=%22700%22 fill=%22%2384fab0%22 text-anchor=%22middle%22>LMF</text></svg>">
+    <title>Contribution Tracker</title>
     <style>
         * {
             margin: 0;
@@ -20,48 +19,22 @@
             background: #fff;
         }
         
-        /* LMF Branding Header */
-        .lmf-header {
-            background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
-            color: white;
-            padding: 12px 15px;
-            text-align: center;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            z-index: 100;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-        }
-        
-        .lmf-header h1 {
-            font-size: 1.2rem;
-            font-weight: 700;
-            background: linear-gradient(120deg, #84fab0 0%, #8fd3f4 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            margin: 0;
-        }
-        
         #loading {
             padding: 20px;
             text-align: center;
             color: #666;
-            margin-top: 60px;
         }
         
         #error {
             padding: 20px;
             color: #d32f2f;
             display: none;
-            margin-top: 60px;
         }
         
         .table-container {
             width: 100vw;
-            height: calc(100vh - 50px);
+            height: 100vh;
             overflow: auto;
-            margin-top: 50px;
         }
         
         table {
@@ -228,7 +201,7 @@
         /* Loading spinner */
         .spinner {
             border: 3px solid #f3f3f3;
-            border-top: 3px solid #84fab0;
+            border-top: 3px solid #3498db;
             border-radius: 50%;
             width: 30px;
             height: 30px;
@@ -243,10 +216,6 @@
     </style>
 </head>
 <body>
-    <div class="lmf-header">
-        <h1>Like-Minded Folks - MMF Tracker</h1>
-    </div>
-    
     <div id="loading">
         <div class="spinner"></div>
         <p>Loading data...</p>
@@ -258,9 +227,9 @@
         const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQfQdBVl01cxsIoGnfJLltGDuOkIVDFqj-rNg3KwFVZ8-GGbUqk1DSs_CVaygisjaLhg30g1gjzIsdC/pub?gid=2079453016&single=true&output=csv';
         
         function parseCSV(text) {
-            const rows = [];
-            let currentRow = [];
-            let currentCell = '';
+            const lines = [];
+            let currentLine = [];
+            let currentField = '';
             let inQuotes = false;
             
             for (let i = 0; i < text.length; i++) {
@@ -269,49 +238,41 @@
                 
                 if (char === '"') {
                     if (inQuotes && nextChar === '"') {
-                        currentCell += '"';
+                        currentField += '"';
                         i++;
                     } else {
                         inQuotes = !inQuotes;
                     }
                 } else if (char === ',' && !inQuotes) {
-                    currentRow.push(currentCell);
-                    currentCell = '';
-                } else if (char === '\n' && !inQuotes) {
-                    currentRow.push(currentCell);
-                    if (currentRow.some(cell => cell.trim())) {
-                        rows.push(currentRow);
+                    currentLine.push(currentField);
+                    currentField = '';
+                } else if ((char === '\n' || char === '\r') && !inQuotes) {
+                    if (currentField || currentLine.length > 0) {
+                        currentLine.push(currentField);
+                        lines.push(currentLine);
+                        currentLine = [];
+                        currentField = '';
                     }
-                    currentRow = [];
-                    currentCell = '';
-                    if (nextChar === '\r') i++;
-                } else if (char === '\r' && nextChar === '\n' && !inQuotes) {
-                    currentRow.push(currentCell);
-                    if (currentRow.some(cell => cell.trim())) {
-                        rows.push(currentRow);
+                    if (char === '\r' && nextChar === '\n') {
+                        i++;
                     }
-                    currentRow = [];
-                    currentCell = '';
-                    i++;
                 } else {
-                    currentCell += char;
+                    currentField += char;
                 }
             }
             
-            if (currentCell || currentRow.length > 0) {
-                currentRow.push(currentCell);
-                if (currentRow.some(cell => cell.trim())) {
-                    rows.push(currentRow);
-                }
+            if (currentField || currentLine.length > 0) {
+                currentLine.push(currentField);
+                lines.push(currentLine);
             }
             
-            return rows;
+            return lines;
         }
         
         function isNumeric(value) {
-            if (!value || typeof value !== 'string') return false;
-            const cleaned = value.replace(/,/g, '');
-            return /^-?\d+\.?\d*$/.test(cleaned);
+            if (!value || value.trim() === '') return false;
+            const num = value.replace(/,/g, '');
+            return !isNaN(num) && !isNaN(parseFloat(num));
         }
         
         function formatNumber(value) {
