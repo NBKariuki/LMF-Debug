@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Contribution Tracker</title>
+    <title>LMF Contribution/Deposit Tracker</title>
     <style>
         * {
             margin: 0;
@@ -51,6 +51,11 @@
             font-size: 11px;
         }
         
+        /* Increase font size for data rows (tbody) */
+        tbody td {
+            font-size: 13px;
+        }
+        
         /* First three columns - frozen and compact */
         th:nth-child(1),
         td:nth-child(1) {
@@ -64,6 +69,11 @@
             max-width: 5vw;
             font-size: 11px;
             padding: 4px 3px;
+        }
+        
+        /* Increase font size for tbody cells in column 1 */
+        tbody td:nth-child(1) {
+            font-size: 13px;
         }
         
         th:nth-child(2),
@@ -83,6 +93,11 @@
             line-height: 1.3;
         }
         
+        /* Increase font size for tbody cells in column 2 */
+        tbody td:nth-child(2) {
+            font-size: 13px;
+        }
+        
         th:nth-child(3),
         td:nth-child(3) {
             position: sticky;
@@ -99,6 +114,11 @@
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+        }
+        
+        /* Increase font size for tbody cells in column 3 */
+        tbody td:nth-child(3) {
+            font-size: 13px;
         }
         
         /* Header rows sticky */
@@ -198,6 +218,11 @@
             padding: 4px 3px;
         }
         
+        /* Increase font size for tbody data cells */
+        tbody td:not(:nth-child(1)):not(:nth-child(2)):not(:nth-child(3)) {
+            font-size: 13px;
+        }
+        
         /* Loading spinner */
         .spinner {
             border: 3px solid #f3f3f3;
@@ -213,9 +238,23 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+        
+        /* Header title */
+        .page-header {
+            text-align: center;
+            padding: 15px;
+            background: #00423e;
+            color: white;
+            font-size: 18px;
+            font-weight: bold;
+            position: sticky;
+            top: 0;
+            z-index: 20;
+        }
     </style>
 </head>
 <body>
+    <div class="page-header">LMF Contribution/Deposit Tracker</div>
     <div id="loading">
         <div class="spinner"></div>
         <p>Loading data...</p>
