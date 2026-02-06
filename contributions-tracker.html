@@ -12,10 +12,10 @@
         }
         
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
-            font-size: 12px;
-            line-height: 1.3;
-            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', Arial, sans-serif;
+            font-size: 14px;
+            line-height: 1.4;
+            overflow-x: hidden;
             background: #fff;
         }
         
@@ -32,170 +32,97 @@
         }
         
         .table-container {
+            position: relative;
             width: 100vw;
             height: 100vh;
+            overflow: hidden;
+        }
+        
+        .table-wrapper {
+            display: flex;
+            height: 100%;
+            overflow: hidden;
+        }
+        
+        /* Frozen columns (left ~30% of screen) */
+        .frozen-columns {
+            width: 30%;
+            max-width: 30vw;
+            flex-shrink: 0;
+            overflow-y: auto;
+            overflow-x: hidden;
+            border-right: 1px solid #e0e0e0;
+            background: #fafafa;
+        }
+        
+        /* Scrollable columns (right ~70% of screen) */
+        .scrollable-columns {
+            width: 70%;
+            flex-grow: 1;
             overflow: auto;
         }
         
         table {
             border-collapse: collapse;
-            width: max-content;
-            font-size: 11px;
+            width: 100%;
         }
         
         th, td {
-            padding: 4px 3px;
-            text-align: center;
-            border: 0.5px solid #d0d0d0;
-            white-space: nowrap;
-            font-size: 11px;
-        }
-        
-        /* First three columns - frozen and compact */
-        th:nth-child(1),
-        td:nth-child(1) {
-            position: sticky;
-            left: 0;
-            background: #fafafa;
-            z-index: 5;
+            padding: 6px 8px;
             text-align: left;
-            width: auto;
-            min-width: 30px;
-            max-width: 5vw;
-            font-size: 11px;
-            padding: 4px 3px;
-        }
-        
-        th:nth-child(2),
-        td:nth-child(2) {
-            position: sticky;
-            left: var(--col1-width, 5vw);
-            background: #fafafa;
-            z-index: 5;
-            text-align: left;
-            width: auto;
-            min-width: 80px;
-            max-width: 16vw;
-            font-size: 11px;
-            padding: 4px 3px;
-            white-space: normal;
-            word-wrap: break-word;
-            line-height: 1.3;
-        }
-        
-        th:nth-child(3),
-        td:nth-child(3) {
-            position: sticky;
-            left: var(--col2-width, 21vw);
-            background: #fafafa;
-            z-index: 5;
-            text-align: right;
-            width: auto;
-            min-width: 80px;
-            max-width: calc(33.33vw - var(--col1-width, 5vw) - var(--col2-width, 21vw) + 5vw + 16vw);
-            font-size: 11px;
-            font-weight: bold;
-            padding: 4px 3px;
+            border: 0.5px solid #e0e0e0;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+            font-size: 13px;
         }
         
-        /* Header rows sticky */
-        thead tr th {
-            position: sticky;
+        th {
             background: #f5f5f5;
             font-weight: 600;
-            z-index: 10;
-        }
-        
-        /* First three column headers higher z-index */
-        thead tr th:nth-child(1),
-        thead tr th:nth-child(2),
-        thead tr th:nth-child(3) {
-            z-index: 15;
-            background: #fafafa;
-        }
-        
-        /* Row 1 - Week numbers */
-        thead tr:nth-child(1) th {
+            position: sticky;
             top: 0;
-            font-size: 10px;
-            padding: 4px 3px;
-        }
-        
-        /* Row 2 - Months (merged cells) */
-        thead tr:nth-child(2) th {
-            top: 24px;
-            font-size: 10px;
-            font-weight: 600;
-            padding: 4px 3px;
-        }
-        
-        /* Row 3 - Dates with wrapping */
-        thead tr:nth-child(3) th {
-            top: 48px;
-            white-space: normal;
-            word-wrap: break-word;
-            font-size: 10px;
-            line-height: 1.2;
-            padding: 4px 2px;
-            height: 36px;
-            vertical-align: middle;
-            background: #00423e !important;
-            color: white;
-        }
-        
-        /* Date row - first three columns also get the color */
-        thead tr:nth-child(3) th:nth-child(1),
-        thead tr:nth-child(3) th:nth-child(2),
-        thead tr:nth-child(3) th:nth-child(3) {
-            background: #00423e !important;
+            z-index: 10;
+            font-size: 12px;
+            padding: 8px 6px;
         }
         
         /* Banded rows - alternating colors */
-        tbody tr:nth-child(even) td {
-            background-color: #dce6f1;
-        }
-        
-        tbody tr:nth-child(odd) td {
+        tbody tr:nth-child(even) {
             background-color: #f9f9f9;
         }
         
-        /* Apply banded colors to frozen columns too */
-        tbody tr:nth-child(even) td:nth-child(1),
-        tbody tr:nth-child(even) td:nth-child(2),
-        tbody tr:nth-child(even) td:nth-child(3) {
-            background-color: #dce6f1;
+        tbody tr:nth-child(odd) {
+            background-color: #ffffff;
         }
         
-        tbody tr:nth-child(odd) td:nth-child(1),
-        tbody tr:nth-child(odd) td:nth-child(2),
-        tbody tr:nth-child(odd) td:nth-child(3) {
-            background-color: #f9f9f9;
-        }
-        
-        /* Number alignment and formatting */
+        /* Number alignment */
         td.number {
             text-align: right;
             font-variant-numeric: tabular-nums;
         }
         
-        /* TOTAL row styling */
-        tbody tr.total-row td {
-            background: #002351 !important;
-            color: white;
-            font-weight: bold;
-            font-size: 12px;
+        /* Compact frozen columns */
+        .frozen-columns th,
+        .frozen-columns td {
+            max-width: 15vw;
+            font-size: 13px;
         }
         
-        /* Compact data columns */
-        th:not(:nth-child(1)):not(:nth-child(2)):not(:nth-child(3)),
-        td:not(:nth-child(1)):not(:nth-child(2)):not(:nth-child(3)) {
-            min-width: 50px;
-            max-width: 65px;
-            font-size: 11px;
-            padding: 4px 3px;
+        /* Compact scrollable columns */
+        .scrollable-columns th,
+        .scrollable-columns td {
+            min-width: 70px;
+            max-width: 90px;
+        }
+        
+        /* Sync scroll between frozen header and body */
+        .frozen-columns {
+            scrollbar-width: thin;
+        }
+        
+        .scrollable-columns {
+            scrollbar-width: thin;
         }
         
         /* Loading spinner */
@@ -216,6 +143,9 @@
     </style>
 </head>
 <body>
+    <div style="padding: 12px 16px; background: #1976d2; color: white; border-bottom: 2px solid #1565c0;">
+        <h1 style="font-size: 18px; font-weight: 600; margin: 0;">LMF Contribution/Deposit Tracker</h1>
+    </div>
     <div id="loading">
         <div class="spinner"></div>
         <p>Loading data...</p>
@@ -224,7 +154,7 @@
     <div id="tableContainer" class="table-container" style="display: none;"></div>
 
     <script>
-        const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQfQdBVl01cxsIoGnfJLltGDuOkIVDFqj-rNg3KwFVZ8-GGbUqk1DSs_CVaygisjaLhg30g1gjzIsdC/pub?gid=2079453016&single=true&output=csv';
+        const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQfQdBVl01cxsIoGnfJLltGDuOkIVDFqj-rNg3KwFVZ8-GGbUqk1DSs_CVaygisjaLhg30g1gjzIsdC/pub?output=csv';
         
         function parseCSV(text) {
             const lines = [];
@@ -282,199 +212,111 @@
         }
         
         function createTable(data) {
-            if (!data || data.length < 5) {
-                throw new Error('Not enough data found');
+            if (!data || data.length === 0) {
+                throw new Error('No data found');
             }
             
-            // Skip first 4 rows
-            // Row 5 (index 4) = Week numbers
-            // Row 6 (index 5) = Months
-            // Row 7 (index 6) = Dates
-            const weekRow = data[4];
-            const monthRow = data[5];
-            const dateRow = data[6];
-            const dataRows = data.slice(7).filter(row => row.some(cell => cell && cell.trim()));
+            const headers = data[0];
+            const rows = data.slice(1).filter(row => row.some(cell => cell && cell.trim()));
             
-            const table = document.createElement('table');
-            const thead = document.createElement('thead');
-            const tbody = document.createElement('tbody');
+            if (headers.length < 3) {
+                throw new Error('Need at least 3 columns (2 frozen + 1 scrollable)');
+            }
             
-            // Create week number row
-            const weekTr = document.createElement('tr');
-            // Add blank cells for first three columns
-            const blankWeek1 = document.createElement('th');
-            const blankWeek2 = document.createElement('th');
-            const blankWeek3 = document.createElement('th');
-            blankWeek3.textContent = 'WEEK NO.';
-            blankWeek3.style.color = 'black';
-            blankWeek3.style.fontWeight = 'bold';
-            weekTr.appendChild(blankWeek1);
-            weekTr.appendChild(blankWeek2);
-            weekTr.appendChild(blankWeek3);
+            // Create frozen columns table
+            const frozenTable = document.createElement('table');
+            const frozenThead = document.createElement('thead');
+            const frozenTbody = document.createElement('tbody');
             
-            for (let i = 3; i < weekRow.length; i++) {
+            // Frozen header
+            const frozenHeaderRow = document.createElement('tr');
+            for (let i = 0; i < 2; i++) {
                 const th = document.createElement('th');
-                th.textContent = weekRow[i] || '';
-                weekTr.appendChild(th);
+                th.textContent = headers[i] || '';
+                frozenHeaderRow.appendChild(th);
             }
-            thead.appendChild(weekTr);
+            frozenThead.appendChild(frozenHeaderRow);
             
-            // Create month row with merged cells
-            const monthTr = document.createElement('tr');
-            // Add blank cells for first three columns
-            const blankMonth1 = document.createElement('th');
-            const blankMonth2 = document.createElement('th');
-            const blankMonth3 = document.createElement('th');
-            blankMonth3.textContent = 'MONTH';
-            blankMonth3.style.color = 'black';
-            blankMonth3.style.fontWeight = 'bold';
-            monthTr.appendChild(blankMonth1);
-            monthTr.appendChild(blankMonth2);
-            monthTr.appendChild(blankMonth3);
-            
-            // Track merged month cells
-            let i = 3;
-            while (i < monthRow.length) {
-                const monthValue = monthRow[i] || '';
-                let colspan = 1;
-                
-                // Count consecutive cells with same month
-                while (i + colspan < monthRow.length && monthRow[i + colspan] === monthValue) {
-                    colspan++;
-                }
-                
-                const th = document.createElement('th');
-                th.textContent = monthValue;
-                if (colspan > 1) {
-                    th.setAttribute('colspan', colspan);
-                }
-                monthTr.appendChild(th);
-                
-                i += colspan;
-            }
-            thead.appendChild(monthTr);
-            
-            // Create date row
-            const dateTr = document.createElement('tr');
-            // Add blank cells for first three columns
-            const blankDate1 = document.createElement('th');
-            const blankDate2 = document.createElement('th');
-            const blankDate3 = document.createElement('th');
-            blankDate3.textContent = 'TOTAL';
-            blankDate3.style.color = 'white';
-            blankDate3.style.fontWeight = 'bold';
-            dateTr.appendChild(blankDate1);
-            dateTr.appendChild(blankDate2);
-            dateTr.appendChild(blankDate3);
-            
-            for (let i = 3; i < dateRow.length; i++) {
-                const th = document.createElement('th');
-                th.textContent = dateRow[i] || '';
-                dateTr.appendChild(th);
-            }
-            thead.appendChild(dateTr);
-            
-            // Create data rows
-            dataRows.forEach(row => {
+            // Frozen body
+            rows.forEach(row => {
                 const tr = document.createElement('tr');
-                
-                // Check if this is a TOTAL row (look for "TOTAL" in first or second column)
-                const isTotal = (row[0] && row[0].toUpperCase().includes('TOTAL')) || 
-                               (row[1] && row[1].toUpperCase().includes('TOTAL'));
-                if (isTotal) {
-                    tr.classList.add('total-row');
-                }
-                
-                for (let i = 0; i < Math.max(row.length, weekRow.length); i++) {
+                for (let i = 0; i < 2; i++) {
                     const td = document.createElement('td');
-                    let value = row[i] || '';
-                    
-                    // Column 1 - text only
-                    if (i === 0) {
-                        td.textContent = value;
-                    } 
-                    // Column 2 - text with wrapping after "/"
-                    else if (i === 1) {
-                        if (value.includes('/')) {
-                            value = value.replace('/', '/\n');
-                        }
-                        td.textContent = value;
-                        td.style.whiteSpace = 'pre-line';
-                    }
-                    // Column 3 - numbers with commas, no decimals, bold, right-aligned
-                    else if (i === 2) {
-                        if (isNumeric(value)) {
-                            td.textContent = formatNumber(value);
-                        } else {
-                            td.textContent = value;
-                        }
-                        // Right-aligned and bold (already styled in CSS)
-                    }
-                    // Other columns - check if numeric
-                    else {
-                        if (isNumeric(value)) {
-                            td.textContent = formatNumber(value);
-                            td.classList.add('number');
-                        } else {
-                            td.textContent = value;
-                        }
-                    }
-                    
+                    const value = row[i] || '';
+                    td.textContent = value;
                     tr.appendChild(td);
                 }
-                tbody.appendChild(tr);
+                frozenTbody.appendChild(tr);
             });
             
-            table.appendChild(thead);
-            table.appendChild(tbody);
+            frozenTable.appendChild(frozenThead);
+            frozenTable.appendChild(frozenTbody);
             
+            // Create scrollable columns table
+            const scrollTable = document.createElement('table');
+            const scrollThead = document.createElement('thead');
+            const scrollTbody = document.createElement('tbody');
+            
+            // Scrollable header
+            const scrollHeaderRow = document.createElement('tr');
+            for (let i = 2; i < headers.length; i++) {
+                const th = document.createElement('th');
+                th.textContent = headers[i] || '';
+                scrollHeaderRow.appendChild(th);
+            }
+            scrollThead.appendChild(scrollHeaderRow);
+            
+            // Scrollable body
+            rows.forEach(row => {
+                const tr = document.createElement('tr');
+                for (let i = 2; i < headers.length; i++) {
+                    const td = document.createElement('td');
+                    const value = row[i] || '';
+                    
+                    if (isNumeric(value)) {
+                        td.textContent = formatNumber(value);
+                        td.classList.add('number');
+                    } else {
+                        td.textContent = value;
+                    }
+                    tr.appendChild(td);
+                }
+                scrollTbody.appendChild(tr);
+            });
+            
+            scrollTable.appendChild(scrollThead);
+            scrollTable.appendChild(scrollTbody);
+            
+            // Create container structure
             const container = document.getElementById('tableContainer');
             container.innerHTML = '';
-            container.appendChild(table);
+            
+            const wrapper = document.createElement('div');
+            wrapper.className = 'table-wrapper';
+            
+            const frozenDiv = document.createElement('div');
+            frozenDiv.className = 'frozen-columns';
+            frozenDiv.appendChild(frozenTable);
+            
+            const scrollDiv = document.createElement('div');
+            scrollDiv.className = 'scrollable-columns';
+            scrollDiv.appendChild(scrollTable);
+            
+            wrapper.appendChild(frozenDiv);
+            wrapper.appendChild(scrollDiv);
+            container.appendChild(wrapper);
+            
+            // Sync vertical scroll between frozen and scrollable sections
+            frozenDiv.addEventListener('scroll', () => {
+                scrollDiv.scrollTop = frozenDiv.scrollTop;
+            });
+            
+            scrollDiv.addEventListener('scroll', () => {
+                frozenDiv.scrollTop = scrollDiv.scrollTop;
+            });
+            
             container.style.display = 'block';
             document.getElementById('loading').style.display = 'none';
-            
-            // Calculate dynamic widths for first three columns
-            setTimeout(() => {
-                const col1Cells = table.querySelectorAll('td:nth-child(1), th:nth-child(1)');
-                const col2Cells = table.querySelectorAll('td:nth-child(2), th:nth-child(2)');
-                const col3Cells = table.querySelectorAll('td:nth-child(3), th:nth-child(3)');
-                
-                let maxCol1 = 0;
-                let maxCol2 = 0;
-                let maxCol3 = 0;
-                
-                col1Cells.forEach(cell => maxCol1 = Math.max(maxCol1, cell.scrollWidth));
-                col2Cells.forEach(cell => maxCol2 = Math.max(maxCol2, cell.scrollWidth));
-                col3Cells.forEach(cell => maxCol3 = Math.max(maxCol3, cell.scrollWidth));
-                
-                // Add some padding
-                maxCol1 += 8;
-                maxCol2 += 8;
-                maxCol3 += 8;
-                
-                // Ensure total doesn't exceed 33.33vw
-                const maxTotal = window.innerWidth * 0.3333;
-                const total = maxCol1 + maxCol2 + maxCol3;
-                
-                if (total > maxTotal) {
-                    const scale = maxTotal / total;
-                    maxCol1 *= scale;
-                    maxCol2 *= scale;
-                    maxCol3 *= scale;
-                }
-                
-                // Set the widths
-                col1Cells.forEach(cell => cell.style.width = maxCol1 + 'px');
-                col2Cells.forEach(cell => {
-                    cell.style.width = maxCol2 + 'px';
-                    cell.style.left = maxCol1 + 'px';
-                });
-                col3Cells.forEach(cell => {
-                    cell.style.width = maxCol3 + 'px';
-                    cell.style.left = (maxCol1 + maxCol2) + 'px';
-                });
-            }, 100);
         }
         
         async function loadData() {
