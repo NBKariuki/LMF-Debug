@@ -20,10 +20,11 @@
             background: #fff;
         }
         
-        .header {
+        /* LMF Branding Header */
+        .lmf-header {
             background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
             color: white;
-            padding: 15px;
+            padding: 12px 15px;
             text-align: center;
             position: fixed;
             top: 0;
@@ -33,42 +34,34 @@
             box-shadow: 0 2px 8px rgba(0,0,0,0.2);
         }
         
-        .header h1 {
-            font-size: 1.3rem;
+        .lmf-header h1 {
+            font-size: 1.2rem;
             font-weight: 700;
             background: linear-gradient(120deg, #84fab0 0%, #8fd3f4 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            margin-bottom: 5px;
-        }
-        
-        .header-subtitle {
-            font-size: 0.75rem;
-            color: rgba(255, 255, 255, 0.7);
-            font-weight: 500;
+            margin: 0;
         }
         
         #loading {
             padding: 20px;
             text-align: center;
             color: #666;
-            margin-top: 100px;
+            margin-top: 60px;
         }
         
         #error {
             padding: 20px;
             color: #d32f2f;
             display: none;
-            margin-top: 100px;
-            text-align: center;
+            margin-top: 60px;
         }
         
         .table-container {
             width: 100vw;
-            height: calc(100vh - 90px);
+            height: calc(100vh - 50px);
             overflow: auto;
-            margin-top: 90px;
-            -webkit-overflow-scrolling: touch;
+            margin-top: 50px;
         }
         
         table {
@@ -247,31 +240,21 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
-        
-        .refresh-hint {
-            text-align: center;
-            padding: 10px;
-            color: #666;
-            font-size: 0.8rem;
-            margin-top: 10px;
-        }
     </style>
 </head>
 <body>
-    <div class="header">
-        <h1>📊 Contribution Tracker</h1>
-        <div class="header-subtitle">Like-Minded Folks - MMF Group</div>
+    <div class="lmf-header">
+        <h1>Like-Minded Folks - MMF Tracker</h1>
     </div>
     
     <div id="loading">
         <div class="spinner"></div>
-        <p>Loading contribution data...</p>
+        <p>Loading data...</p>
     </div>
     <div id="error"></div>
     <div id="tableContainer" class="table-container" style="display: none;"></div>
 
     <script>
-        // Google Sheets CSV URL - same as the original
         const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQfQdBVl01cxsIoGnfJLltGDuOkIVDFqj-rNg3KwFVZ8-GGbUqk1DSs_CVaygisjaLhg30g1gjzIsdC/pub?gid=2079453016&single=true&output=csv';
         
         function parseCSV(text) {
@@ -357,6 +340,7 @@
             
             // Create week number row
             const weekTr = document.createElement('tr');
+            // Add blank cells for first three columns
             const blankWeek1 = document.createElement('th');
             const blankWeek2 = document.createElement('th');
             const blankWeek3 = document.createElement('th');
@@ -376,6 +360,7 @@
             
             // Create month row with merged cells
             const monthTr = document.createElement('tr');
+            // Add blank cells for first three columns
             const blankMonth1 = document.createElement('th');
             const blankMonth2 = document.createElement('th');
             const blankMonth3 = document.createElement('th');
@@ -392,6 +377,7 @@
                 const monthValue = monthRow[i] || '';
                 let colspan = 1;
                 
+                // Count consecutive cells with same month
                 while (i + colspan < monthRow.length && monthRow[i + colspan] === monthValue) {
                     colspan++;
                 }
@@ -409,6 +395,7 @@
             
             // Create date row
             const dateTr = document.createElement('tr');
+            // Add blank cells for first three columns
             const blankDate1 = document.createElement('th');
             const blankDate2 = document.createElement('th');
             const blankDate3 = document.createElement('th');
@@ -430,7 +417,7 @@
             dataRows.forEach(row => {
                 const tr = document.createElement('tr');
                 
-                // Check if this is a TOTAL row
+                // Check if this is a TOTAL row (look for "TOTAL" in first or second column)
                 const isTotal = (row[0] && row[0].toUpperCase().includes('TOTAL')) || 
                                (row[1] && row[1].toUpperCase().includes('TOTAL'));
                 if (isTotal) {
@@ -460,6 +447,7 @@
                         } else {
                             td.textContent = value;
                         }
+                        // Right-aligned and bold (already styled in CSS)
                     }
                     // Other columns - check if numeric
                     else {
@@ -542,37 +530,13 @@
                 console.error('Error loading data:', error);
                 document.getElementById('loading').style.display = 'none';
                 const errorDiv = document.getElementById('error');
-                errorDiv.innerHTML = `
-                    <div style="padding: 20px;">
-                        <p style="margin-bottom: 10px; font-weight: bold;">⚠️ Error loading data</p>
-                        <p style="margin-bottom: 15px; font-size: 0.9rem;">${error.message}</p>
-                        <p class="refresh-hint">Pull down to refresh the page</p>
-                    </div>
-                `;
+                errorDiv.textContent = `Error loading data: ${error.message}. Pull down to refresh.`;
                 errorDiv.style.display = 'block';
             }
         }
         
         // Load data on page load
         loadData();
-        
-        // Pull-to-refresh functionality for mobile
-        let touchStartY = 0;
-        let touchEndY = 0;
-        
-        document.addEventListener('touchstart', e => {
-            touchStartY = e.changedTouches[0].screenY;
-        }, { passive: true });
-        
-        document.addEventListener('touchend', e => {
-            touchEndY = e.changedTouches[0].screenY;
-            const container = document.getElementById('tableContainer');
-            
-            // If scrolled to top and pulled down more than 50px, refresh
-            if (container.scrollTop === 0 && touchEndY > touchStartY + 50) {
-                location.reload();
-            }
-        }, { passive: true });
     </script>
 </body>
 </html>
