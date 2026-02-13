@@ -1659,7 +1659,7 @@
                             {/* Track Contributions */}
                             <div className="sidebar-section">
                                 <h3>📊 Track Activity</h3>
-                                <a href="https://docs.google.com/spreadsheets/d/e/2PACX-1vQfQdBVl01cxsIoGnfJLltGDuOkIVDFqj-rNg3KwFVZ8-GGbUqk1DSs_CVaygisjaLhg30g1gjzIsdC/pubhtml?gid=2079453016&single=true" target="_blank" rel="noopener noreferrer" className="sidebar-link">
+                                <a href="contributions-tracker.html" target="_blank" rel="noopener noreferrer" className="sidebar-link">
                                     View Contributions
                                 </a>
                             </div>
@@ -1904,40 +1904,51 @@
                     }
                 }
                 
-                // Historical Comparison: Current Month vs Previous Month
-                const previousMonthData = monthIndex > 0 ? data[MONTHS[monthIndex - 1]]?.[selectedAlias] : null;
-                const currentMonthData = data[currentMonth]?.[selectedAlias];
+                // Complete labels for all 12 months
+                for (let i = labels.length; i < 12; i++) {
+                    labels.push(MONTHS[i].slice(0, 3));
+                }
                 
-                const comparisonLabels = ['Balance', 'Contributions', 'Interest'];
-                const previousValues = [
-                    previousMonthData?.closingBalance || 0,
-                    previousMonthData?.topups || 0,
-                    previousMonthData?.interest || 0
-                ];
-                const currentValues = [
-                    currentMonthData?.closingBalance || 0,
-                    currentMonthData?.topups || 0,
-                    currentMonthData?.interest || 0
-                ];
+                // Calculate moving average for smooth trend
+                const movingAvg = calculateMovingAverage(actualBalances, 2);
 
                 chartInstanceRef.current = new Chart(ctx, {
                     type: 'bar',
                     data: {
-                        labels: comparisonLabels,
+                        labels: labels,
                         datasets: [
                             {
-                                label: monthIndex > 0 ? MONTHS[monthIndex - 1] : 'Previous',
-                                data: previousValues,
-                                backgroundColor: 'rgba(143, 211, 244, 0.7)',
-                                borderColor: '#8fd3f4',
-                                borderWidth: 2
+                                label: 'Actual Balance',
+                                data: actualBalances,
+                                backgroundColor: 'rgba(132, 250, 176, 0.6)',
+                                borderColor: '#84fab0',
+                                borderWidth: 2,
+                                type: 'bar',
+                                order: 3
                             },
                             {
-                                label: currentMonth,
-                                data: currentValues,
-                                backgroundColor: 'rgba(132, 250, 176, 0.7)',
-                                borderColor: '#84fab0',
-                                borderWidth: 2
+                                label: 'Trend',
+                                data: movingAvg,
+                                borderColor: '#FF8C42',
+                                backgroundColor: 'transparent',
+                                borderWidth: 2,
+                                type: 'line',
+                                pointRadius: 3,
+                                pointBackgroundColor: '#FF8C42',
+                                order: 2,
+                                tension: 0.4
+                            },
+                            {
+                                label: 'Projected',
+                                data: projectedBalances,
+                                borderColor: '#8fd3f4',
+                                backgroundColor: 'transparent',
+                                borderWidth: 2,
+                                borderDash: [5, 5],
+                                type: 'line',
+                                pointRadius: 4,
+                                pointBackgroundColor: '#8fd3f4',
+                                order: 1
                             }
                         ]
                     },
@@ -2053,7 +2064,7 @@
                             marginBottom: '15px',
                             textAlign: 'center'
                         }}>
-                            📊 This Month vs Last Month
+                            📈 Your Growth Trajectory
                         </h3>
                         <div style={{ height: '250px', position: 'relative' }}>
                             <canvas ref={chartRef}></canvas>
@@ -2334,52 +2345,43 @@
                         projectedBalances.push(lastVal + avgMonthlyContribution + (lastVal * ETICA_MONTHLY_YIELD));
                     }
                 }
-                
-                // Historical Comparison: Current Month vs Previous Month for entire group
-                const previousMonthIndex = monthIndex - 1;
-                let previousBalance = 0;
-                let previousContributions = 0;
-                let previousInterest = 0;
-                let currentBalance = 0;
-                let currentContributions = 0;
-                let currentInterest = 0;
-                
-                if (previousMonthIndex >= 0) {
-                    MEMBERS.forEach(alias => {
-                        const prevData = data[MONTHS[previousMonthIndex]]?.[alias];
-                        previousBalance += prevData?.closingBalance || 0;
-                        previousContributions += prevData?.topups || 0;
-                        previousInterest += prevData?.interest || 0;
-                    });
-                }
-                
-                MEMBERS.forEach(alias => {
-                    const currData = data[currentMonth]?.[alias];
-                    currentBalance += currData?.closingBalance || 0;
-                    currentContributions += currData?.topups || 0;
-                    currentInterest += currData?.interest || 0;
-                });
-                
-                const comparisonLabels = ['Total Balance', 'Contributions', 'Interest Earned'];
-                const previousValues = [previousBalance, previousContributions, previousInterest];
-                const currentValues = [currentBalance, currentContributions, currentInterest];
+
+                const barData = MONTHS.map((m, idx) => idx < actualBalances.length ? actualBalances[idx] : null);
+                const movingAvg = calculateMovingAverage(actualBalances, 2);
 
                 chartInstanceRef.current = new Chart(ctx, {
                     type: 'bar',
                     data: {
-                        labels: comparisonLabels,
+                        labels,
                         datasets: [{
-                            label: previousMonthIndex >= 0 ? MONTHS[previousMonthIndex] : 'Previous',
-                            data: previousValues,
+                            type: 'bar',
+                            label: 'Actual Balance',
+                            data: barData,
                             backgroundColor: 'rgba(143, 211, 244, 0.7)',
                             borderColor: '#8fd3f4',
-                            borderWidth: 2
+                            borderWidth: 1,
+                            order: 3
                         }, {
-                            label: currentMonth,
-                            data: currentValues,
-                            backgroundColor: 'rgba(132, 250, 176, 0.7)',
+                            type: 'line',
+                            label: 'Trend',
+                            data: movingAvg,
+                            borderColor: '#FF8C42',
+                            backgroundColor: 'transparent',
+                            borderWidth: 2,
+                            pointRadius: 3,
+                            fill: false,
+                            order: 2,
+                            tension: 0.4
+                        }, {
+                            type: 'line',
+                            label: 'Projected',
+                            data: projectedBalances,
                             borderColor: '#84fab0',
-                            borderWidth: 2
+                            borderWidth: 2,
+                            borderDash: [5, 5],
+                            fill: false,
+                            pointRadius: 3,
+                            order: 1
                         }]
                     },
                     options: {
@@ -2432,7 +2434,7 @@
                         marginBottom: '10px',
                         textAlign: 'center'
                     }}>
-                        📊 Group Performance: This Month vs Last Month
+                        📊 Group Balance Growth
                     </h3>
                     <p style={{
                         fontSize: '0.85rem',
@@ -2451,17 +2453,10 @@
         }
 
         function AllMembersView({ month, members, fileLastModified, data }) {
-            const [searchQuery, setSearchQuery] = React.useState('');
-            
-            // Filter members based on search query
-            const filteredMembers = members.filter(member =>
-                member.alias.toLowerCase().includes(searchQuery.toLowerCase())
-            );
-            
-            const totalOpening = filteredMembers.reduce((sum, m) => sum + m.openingBalance, 0);
-            const totalTopups = filteredMembers.reduce((sum, m) => sum + m.topups, 0);
-            const totalInterest = filteredMembers.reduce((sum, m) => sum + m.interest, 0);
-            const totalClosing = filteredMembers.reduce((sum, m) => sum + m.closingBalance, 0);
+            const totalOpening = members.reduce((sum, m) => sum + m.openingBalance, 0);
+            const totalTopups = members.reduce((sum, m) => sum + m.topups, 0);
+            const totalInterest = members.reduce((sum, m) => sum + m.interest, 0);
+            const totalClosing = members.reduce((sum, m) => sum + m.closingBalance, 0);
 
             return (
                 <div>
@@ -2470,64 +2465,6 @@
                     </h2>
 
                     <GroupBalanceChart data={data} currentMonth={month} />
-
-                    {/* Search Box */}
-                    <div style={{
-                        marginBottom: '20px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '10px',
-                        maxWidth: '400px',
-                        margin: '0 auto 20px'
-                    }}>
-                        <div style={{ position: 'relative', flex: 1 }}>
-                            <input
-                                type="text"
-                                placeholder="🔍 Search member by alias..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                style={{
-                                    width: '100%',
-                                    padding: '10px 35px 10px 12px',
-                                    fontSize: '0.9rem',
-                                    border: '2px solid rgba(132, 250, 176, 0.3)',
-                                    borderRadius: '8px',
-                                    background: 'rgba(255, 255, 255, 0.05)',
-                                    color: '#fff',
-                                    outline: 'none'
-                                }}
-                                onFocus={(e) => e.target.style.borderColor = '#84fab0'}
-                                onBlur={(e) => e.target.style.borderColor = 'rgba(132, 250, 176, 0.3)'}
-                            />
-                            {searchQuery && (
-                                <button
-                                    onClick={() => setSearchQuery('')}
-                                    style={{
-                                        position: 'absolute',
-                                        right: '8px',
-                                        top: '50%',
-                                        transform: 'translateY(-50%)',
-                                        background: 'transparent',
-                                        border: 'none',
-                                        color: 'rgba(255, 255, 255, 0.5)',
-                                        cursor: 'pointer',
-                                        fontSize: '1.2rem',
-                                        padding: '0 5px'
-                                    }}
-                                    title="Clear search"
-                                >
-                                    ×
-                                </button>
-                            )}
-                        </div>
-                        <span style={{
-                            fontSize: '0.85rem',
-                            color: 'rgba(255, 255, 255, 0.7)',
-                            whiteSpace: 'nowrap'
-                        }}>
-                            {filteredMembers.length} of {members.length}
-                        </span>
-                    </div>
 
                     <div className="members-table-container">
                         <table className="members-table">
@@ -2541,7 +2478,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                {filteredMembers.map(member => {
+                                {members.map(member => {
                                     const dotColor = member.topups >= MINIMUM_CONTRIBUTION ? '#84fab0' :
                                                      member.topups > 0 ? '#FFD700' : '#DC143C';
                                     const dotTitle = member.topups >= MINIMUM_CONTRIBUTION ? '✅ Met minimum (KES 4,000+)' :
