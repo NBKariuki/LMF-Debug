@@ -274,8 +274,8 @@
 
         /* ── PRIVACY NOTICE ─────────────────────── */
         .privacy-notice {
-            margin-top: 0;
-            margin-bottom: 20px;
+            margin-top: 28px;
+            margin-bottom: 60px;
             padding: 11px 14px;
             background: rgba(248,113,113,0.07);
             border: 1px solid rgba(248,113,113,0.3);
@@ -1110,6 +1110,14 @@
 
                             {view==='member' && <MemberView month={selectedMonth} selectedAlias={selectedAlias} setSelectedAlias={setSelectedAlias} data={data} stats={stats} fileLastModified={fileLastModified} isCurrentMonth={isCurrentMonth(selectedMonth)} shouldShowWarnings={shouldShowWarnings()} />}
                             {view==='all'    && <AllMembersView month={selectedMonth} members={getAllMembersData(selectedMonth)} fileLastModified={fileLastModified} data={data} />}
+
+                            <div className="privacy-notice">
+                                <span className="privacy-lock">🔐</span>
+                                <div>
+                                    <div className="privacy-title">Members Only — Confidential</div>
+                                    <div className="privacy-body">This site is for LMF members only. Do not share links or screenshots outside LMF.</div>
+                                </div>
+                            </div>
                         </main>
                     </div>
 
@@ -1339,14 +1347,6 @@
             }
             return (
                 <div className="member-view">
-                    <div className="privacy-notice privacy-notice--alert">
-                        <span className="privacy-lock">🔐</span>
-                        <div>
-                            <div className="privacy-title">Members Only — Confidential</div>
-                            <div className="privacy-body">Do not share links or screenshots outside LMF.</div>
-                        </div>
-                    </div>
-
                     <div className="alias-selector">
                         <select value={selectedAlias} onChange={e=>setSelectedAlias(e.target.value)}>
                             <option value="" disabled>Select your alias to view balance</option>
