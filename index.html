@@ -1098,47 +1098,44 @@
 
                 const ctx        = chartRef.current.getContext('2d');
                 const monthIndex = MONTHS.indexOf(currentMonth);
-                const labels     = MONTHS.map(m => m.slice(0,3));
+                const labels     = MONTHS.map(m => m.slice(0, 3));
 
-                // ── Dataset 1: monthly deposit bars (actual + projected avg)
+                // ── DATASET 1: Bars — actual deposits only (null for future months, no bar rendered)
                 let totalTopups = 0;
                 const actualDeposits = [];
-                for (let i = 0; i <= monthIndex; i++) {
-                    const md = data[MONTHS[i]]?.[selectedAlias] || { topups: 0 };
-                    actualDeposits.push(md.topups);
-                    totalTopups += md.topups;
-                }
-                const avg = (monthIndex + 1) > 0 ? totalTopups / (monthIndex + 1) : 0;
-                const barData = [
-                    ...actualDeposits,
-                    ...Array(12 - actualDeposits.length).fill(avg)
-                ];
-                const barColors = barData.map((v, i) =>
-                    i <= monthIndex
-                        ? (v >= MINIMUM_CONTRIBUTION ? 'rgba(0,229,160,0.7)' : v > 0 ? 'rgba(245,158,11,0.7)' : 'rgba(248,113,113,0.5)')
-                        : 'rgba(96,165,250,0.25)'
-                );
-                const barBorders = barData.map((v, i) =>
-                    i <= monthIndex
-                        ? (v >= MINIMUM_CONTRIBUTION ? '#00e5a0' : v > 0 ? '#f59e0b' : '#f87171')
-                        : 'rgba(96,165,250,0.5)'
-                );
+                const actualBalances = [];
 
-                // ── Dataset 2: running balance (contributions + interest) to date
-                const actualBalance = [];
                 for (let i = 0; i <= monthIndex; i++) {
                     const md = data[MONTHS[i]]?.[selectedAlias] || {};
-                    actualBalance.push(md.closingBalance || 0);
+                    const topup   = md.topups        || 0;
+                    const balance = md.closingBalance || 0;
+                    actualDeposits.push(topup);
+                    actualBalances.push(balance);
+                    totalTopups += topup;
                 }
-                const balanceLine = [...actualBalance, ...Array(12 - actualBalance.length).fill(null)];
 
-                // ── Dataset 3: projected balance from current month forward
-                const lastBalance = actualBalance[actualBalance.length - 1] || 0;
-                const projLine    = Array(12).fill(null);
-                projLine[monthIndex] = lastBalance;
+                // Average based on months elapsed (used for projection)
+                const avg = (monthIndex + 1) > 0 ? totalTopups / (monthIndex + 1) : MINIMUM_CONTRIBUTION;
+
+                // Bars: actual data for elapsed months, null for future (no bar rendered)
+                const barData = [...actualDeposits, ...Array(11 - monthIndex).fill(null)];
+                const barColors  = actualDeposits.map(v =>
+                    v >= MINIMUM_CONTRIBUTION ? 'rgba(0,229,160,0.78)' : v > 0 ? 'rgba(245,158,11,0.78)' : 'rgba(248,113,113,0.55)'
+                ).concat(Array(11 - monthIndex).fill('transparent'));
+                const barBorders = actualDeposits.map(v =>
+                    v >= MINIMUM_CONTRIBUTION ? '#00e5a0' : v > 0 ? '#f59e0b' : '#f87171'
+                ).concat(Array(11 - monthIndex).fill('transparent'));
+
+                // ── DATASET 2: Line — actual closing balance per month (null for future)
+                const balanceLine = [...actualBalances, ...Array(11 - monthIndex).fill(null)];
+
+                // ── DATASET 3: Line — projected balance starting from current month's actual balance
+                const lastBal  = actualBalances[actualBalances.length - 1] || 0;
+                const projLine = Array(12).fill(null);
+                projLine[monthIndex] = lastBal;  // anchor to last actual point
                 for (let i = monthIndex + 1; i < 12; i++) {
                     const prev = projLine[i - 1];
-                    projLine[i] = prev + avg + (prev * ETICA_MONTHLY_YIELD);
+                    projLine[i] = (prev + avg) * (1 + ETICA_MONTHLY_YIELD);
                 }
 
                 chartInstanceRef.current = new Chart(ctx, {
@@ -1161,13 +1158,14 @@
                                 label: 'Balance to Date',
                                 data: balanceLine,
                                 borderColor: '#00e5a0',
-                                backgroundColor: 'rgba(0,229,160,0.06)',
+                                backgroundColor: 'transparent',
                                 borderWidth: 2.5,
                                 pointBackgroundColor: '#00e5a0',
-                                pointRadius: 3,
-                                pointHoverRadius: 5,
-                                fill: true,
-                                tension: 0.35,
+                                pointBorderColor: '#00e5a0',
+                                pointRadius: 4,
+                                pointHoverRadius: 6,
+                                fill: false,
+                                tension: 0.3,
                                 yAxisID: 'yBalance',
                                 order: 1,
                                 spanGaps: false,
@@ -1179,12 +1177,13 @@
                                 borderColor: '#60a5fa',
                                 backgroundColor: 'transparent',
                                 borderWidth: 2,
-                                borderDash: [5, 4],
+                                borderDash: [6, 4],
                                 pointBackgroundColor: '#60a5fa',
-                                pointRadius: 2,
-                                pointHoverRadius: 4,
+                                pointBorderColor: '#60a5fa',
+                                pointRadius: 3,
+                                pointHoverRadius: 5,
                                 fill: false,
-                                tension: 0.35,
+                                tension: 0.3,
                                 yAxisID: 'yBalance',
                                 order: 2,
                                 spanGaps: false,
@@ -1197,12 +1196,20 @@
                         interaction: { mode: 'index', intersect: false },
                         plugins: {
                             legend: {
-                                display: true, position: 'top',
-                                labels: { color: 'rgba(240,240,248,0.5)', font: { size: 10, family: 'Space Grotesk' }, boxWidth: 10, padding: 12 }
+                                display: true,
+                                position: 'top',
+                                labels: {
+                                    color: 'rgba(240,240,248,0.55)',
+                                    font: { size: 10, family: 'Space Grotesk' },
+                                    boxWidth: 10, padding: 12
+                                }
                             },
                             tooltip: {
-                                backgroundColor: '#1a1a2e', titleColor: '#00e5a0',
-                                bodyColor: '#f0f0f8', borderColor: 'rgba(0,229,160,0.25)', borderWidth: 1,
+                                backgroundColor: '#1a1a2e',
+                                titleColor: '#00e5a0',
+                                bodyColor: '#f0f0f8',
+                                borderColor: 'rgba(0,229,160,0.25)',
+                                borderWidth: 1,
                                 callbacks: {
                                     label: ctx => {
                                         const v = ctx.parsed.y;
@@ -1213,18 +1220,27 @@
                             }
                         },
                         scales: {
-                            yDeposit: {
-                                type: 'linear', position: 'right',
-                                beginAtZero: true,
-                                ticks: { color: 'rgba(240,240,248,0.3)', font: { size: 8 }, callback: v => (v/1000).toFixed(0)+'k' },
-                                grid: { display: false },
-                                title: { display: false }
-                            },
                             yBalance: {
-                                type: 'linear', position: 'left',
-                                beginAtZero: false,
-                                ticks: { color: 'rgba(240,240,248,0.3)', font: { size: 8 }, callback: v => 'KES '+(v/1000).toFixed(0)+'k' },
-                                grid: { color: 'rgba(255,255,255,0.04)' },
+                                type: 'linear',
+                                position: 'left',
+                                beginAtZero: true,
+                                ticks: {
+                                    color: 'rgba(240,240,248,0.35)',
+                                    font: { size: 9 },
+                                    callback: v => 'KES ' + (v / 1000).toFixed(0) + 'k'
+                                },
+                                grid: { color: 'rgba(255,255,255,0.04)' }
+                            },
+                            yDeposit: {
+                                type: 'linear',
+                                position: 'right',
+                                beginAtZero: true,
+                                ticks: {
+                                    color: 'rgba(240,240,248,0.25)',
+                                    font: { size: 8 },
+                                    callback: v => (v / 1000).toFixed(0) + 'k'
+                                },
+                                grid: { display: false }
                             },
                             x: {
                                 ticks: { color: 'rgba(240,240,248,0.35)', font: { size: 9 } },
@@ -1233,20 +1249,23 @@
                         }
                     }
                 });
+
                 return () => { if (chartInstanceRef.current) chartInstanceRef.current.destroy(); };
             }, [selectedAlias, data, currentMonth]);
 
             if (!selectedAlias) return null;
 
+            // Build hist for motivation card
             const monthIndex = MONTHS.indexOf(currentMonth);
             const hist = { totalTopups:0, totalInterest:0, currentMonthTopup:0, currentInterest:0, previousMonthTopup:0, previousInterest:0, closingBalance:0, daysActive:0 };
-            for (let i=0; i<=monthIndex; i++) {
+            for (let i = 0; i <= monthIndex; i++) {
                 const md = data[MONTHS[i]]?.[selectedAlias] || {};
-                hist.totalTopups  += md.topups||0; hist.totalInterest += md.interest||0;
-                if (i===monthIndex) { hist.currentMonthTopup=md.topups||0; hist.currentInterest=md.interest||0; hist.closingBalance=md.closingBalance||0; hist.daysActive=md.daysActive||0; }
-                if (i===monthIndex-1) { hist.previousMonthTopup=md.topups||0; hist.previousInterest=md.interest||0; }
+                hist.totalTopups   += md.topups   || 0;
+                hist.totalInterest += md.interest || 0;
+                if (i === monthIndex)   { hist.currentMonthTopup = md.topups||0; hist.currentInterest = md.interest||0; hist.closingBalance = md.closingBalance||0; hist.daysActive = md.daysActive||0; }
+                if (i === monthIndex-1) { hist.previousMonthTopup = md.topups||0; hist.previousInterest = md.interest||0; }
             }
-            const allMD      = MEMBERS.map(a=>({ alias:a, closingBalance:data[currentMonth]?.[a]?.closingBalance||0 }));
+            const allMD      = MEMBERS.map(a => ({ alias:a, closingBalance: data[currentMonth]?.[a]?.closingBalance||0 }));
             const archetype  = calculateMemberArchetype(hist, allMD, currentMonth);
             const motivation = formatArchetypeMessage(archetype, hist, allMD, currentMonth);
 
@@ -1254,8 +1273,12 @@
                 <div style={{marginTop:'14px'}}>
                     <div className="chart-card">
                         <div className="chart-card-label">Contributions &amp; Balance Growth</div>
-                        <div className="chart-card-sub">Bars = monthly deposits · Lines = balance to date &amp; projected</div>
-                        <div style={{height:'240px', position:'relative'}}><canvas ref={chartRef}/></div>
+                        <div className="chart-card-sub">
+                            <span style={{color:'var(--accent)'}}>▊</span> Monthly top-ups &nbsp;
+                            <span style={{color:'var(--accent)'}}>——</span> Balance to date &nbsp;
+                            <span style={{color:'var(--blue)'}}>╌╌</span> Projected to Dec
+                        </div>
+                        <div style={{height:'250px', position:'relative'}}><canvas ref={chartRef}/></div>
                     </div>
                     <div className="motivation-card">
                         <span className="motivation-icon">{motivation.icon}</span>
@@ -1328,7 +1351,6 @@
                                 </div>
                                 {fileLastModified && <div className="data-timestamp">Data as of {fileLastModified.toLocaleString('en-KE',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:true})}</div>}
                             </div>
-                            <div className="privacy-notice">🔐 <strong>Privacy Notice:</strong> This site is for LMF members only. Keep it confidential. Do not share links or screenshots outside LMF.</div>
 
                             {showWarning && (
                                 <div className="warning-message">
