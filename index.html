@@ -165,29 +165,29 @@
         }
 
         /* ── MAIN ─────────────────────────────── */
-        .main-content { flex: 1; min-width: 0; padding: 32px 20px; }
+        .main-content { flex: 1; min-width: 0; padding: 24px 20px; }
 
-        /* ── HEADER ─────────────────────────────── */
-        .header { margin-bottom: 32px; }
+        /* ── HEADER — centred ─────────────────── */
+        .header { margin-bottom: 19px; text-align: center; }
         .header-eyebrow {
-            font-size: 0.68rem; font-weight: 700; letter-spacing: 0.12em;
-            text-transform: uppercase; color: var(--accent); margin-bottom: 5px;
-            display: flex; align-items: center; gap: 8px;
+            font-size: 0.72rem; font-weight: 700; letter-spacing: 0.12em;
+            text-transform: uppercase; color: var(--accent); margin-bottom: 4px;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
         }
         .header-eyebrow::before { content:''; display:inline-block; width:18px; height:2px; background:var(--accent); border-radius:2px; }
         .header h1 {
             font-family: 'Sora', sans-serif;
-            font-size: clamp(1.5rem, 4vw, 2.3rem);
+            font-size: clamp(1.6rem, 4vw, 2.3rem);
             font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; margin-bottom: 3px;
         }
         .header-sub { color: var(--t2); font-size: 0.88rem; font-weight: 500; }
 
-        /* ── MONTH SELECTOR — 2×6 touch grid ─── */
+        /* ── MONTH SELECTOR — 5mm below header ── */
         .month-selector {
             display: grid;
             grid-template-columns: repeat(6, 1fr);
             gap: 6px;
-            margin-bottom: 28px;
+            margin-bottom: 19px;
             width: 100%;
         }
         .month-btn {
@@ -199,7 +199,7 @@
             cursor: pointer;
             transition: all 0.18s;
             font-family: 'Space Grotesk', sans-serif;
-            font-weight: 600; font-size: 0.78rem;
+            font-weight: 600; font-size: 0.82rem;
             text-align: center; min-height: 42px;
         }
         .month-btn:hover { color: var(--t1); background: var(--elevated); border-color: rgba(255,255,255,0.13); }
@@ -209,8 +209,8 @@
             box-shadow: 0 2px 14px rgba(0,229,160,0.32);
         }
 
-        /* ── VIEW TOGGLE ─────────────────────────── */
-        .view-toggle { display: flex; gap: 8px; margin-bottom: 32px; }
+        /* ── VIEW TOGGLE — 5mm below months ───── */
+        .view-toggle { display: flex; gap: 8px; margin-bottom: 19px; }
         .toggle-btn {
             padding: 10px 20px;
             border: 1px solid var(--border);
@@ -225,9 +225,10 @@
         /* ── MEMBER VIEW ─────────────────────────── */
         .member-view { max-width: 580px; margin: 0 auto; }
 
-        .alias-selector { margin-bottom: 40px; }
+        /* 10mm below alias selector before rest */
+        .alias-selector { margin-bottom: 38px; }
         .alias-selector select {
-            width: 100%; padding: 16px 16px; font-size: 1rem; font-weight: 600;
+            width: 100%; padding: 14px 16px; font-size: 1rem; font-weight: 600;
             background: var(--surface); color: var(--t1);
             border: 1px solid var(--border-g); border-radius: var(--r-md);
             font-family: 'Space Grotesk', sans-serif; cursor: pointer;
@@ -334,7 +335,7 @@
         .group-summary {
             background: var(--card); border: 1px solid var(--border-g);
             border-radius: var(--r-xl); padding: 20px;
-            margin: 48px auto 0; max-width: 600px;
+            margin: 19px auto 0; max-width: 600px;
         }
         .group-summary-title {
             font-size: 0.68rem; font-weight: 700; color: var(--t3);
@@ -578,103 +579,55 @@
             .sidebar.mobile-open { display: flex; }
             .sidebar-close { display: block; }
             .mobile-menu-toggle { display: flex; }
-            .main-content { padding: 16px 12px; }
-            .header { margin-bottom: 20px; }
-            .header h1 { font-size: 1.5rem; }
-            .header-sub { font-size: 0.8rem; }
-            .view-toggle { margin-bottom: 20px; }
-            .toggle-btn { padding: 9px 16px; font-size: 0.82rem; }
-
-            /* Month selector tighter on tablet */
-            .month-selector { gap: 5px; margin-bottom: 20px; }
-
-            /* Group summary closer to top */
-            .group-summary { margin: 24px auto 0; }
-
-            /* Statement card tighter */
-            .member-statement { padding: 18px 16px; }
-            .statement-alias { font-size: 1.4rem; }
-            .statement-value.closing { font-size: 1.3rem; }
-
-            /* Chart height reduced on smaller screens */
-            .chart-card { padding: 14px; }
+            .main-content { padding: 16px 14px; }
+            .group-summary { margin-top: 19px; }
         }
 
         @media (max-width: 480px) {
-            /* Core layout */
-            .main-content { padding: 12px 10px; }
-            .header { margin-bottom: 16px; }
-            .header-eyebrow { font-size: 0.62rem; }
-            .header h1 { font-size: 1.3rem; }
-            .header-sub { display: none; } /* reclaim vertical space */
+            .main-content { padding: 14px 12px; }
 
-            /* Month buttons — 2 rows × 6, compact */
-            .month-selector { gap: 4px; margin-bottom: 16px; }
-            .month-btn { font-size: 0.68rem; padding: 8px 2px; min-height: 36px; border-radius: 8px; }
+            /* Header — stays centred, readable */
+            .header { margin-bottom: 19px; }
+            .header h1 { font-size: 1.5rem; }
+            .header-sub { font-size: 0.84rem; }
 
-            /* View toggle — full width buttons */
-            .view-toggle { gap: 6px; margin-bottom: 16px; }
-            .toggle-btn { flex: 1; padding: 9px 8px; font-size: 0.8rem; text-align: center; }
+            /* Month buttons */
+            .month-selector { gap: 5px; margin-bottom: 19px; }
+            .month-btn { font-size: 0.76rem; padding: 9px 3px; min-height: 40px; }
 
-            /* Alias selector */
-            .alias-selector { margin-bottom: 20px; }
-            .alias-selector select { padding: 13px 38px 13px 13px; font-size: 0.92rem; }
+            /* View toggle */
+            .view-toggle { gap: 6px; margin-bottom: 19px; }
+            .toggle-btn { flex: 1; text-align: center; font-size: 0.84rem; }
+
+            /* Alias — 10mm gap below */
+            .alias-selector { margin-bottom: 38px; }
+            .alias-selector select { padding: 13px 38px 13px 13px; font-size: 0.95rem; }
 
             /* Statement card */
-            .member-statement { padding: 16px 14px; border-radius: var(--r-lg); margin-bottom: 14px; }
-            .statement-alias { font-size: 1.3rem; margin-bottom: 2px; }
-            .statement-month { margin-bottom: 14px; font-size: 0.78rem; }
-            .statement-row { padding: 9px 0; }
-            .statement-label { font-size: 0.82rem; }
-            .statement-value { font-size: 0.92rem; }
-            .statement-value.closing { font-size: 1.2rem; }
-            .data-timestamp { font-size: 0.68rem; margin-top: 10px; }
+            .member-statement { padding: 18px 16px; margin-bottom: 16px; }
+            .statement-alias { font-size: 1.4rem; }
+            .statement-label { font-size: 0.88rem; }
+            .statement-value { font-size: 0.95rem; }
+            .statement-value.closing { font-size: 1.25rem; }
 
             /* Group summary */
-            .group-summary { margin: 16px auto 0; padding: 14px; border-radius: var(--r-lg); }
-            .group-summary-title { font-size: 0.6rem; margin-bottom: 10px; }
-            .group-summary-grid { gap: 5px; }
-            .summary-item { padding: 10px 6px 12px; min-height: 76px; border-radius: 8px; }
-            .summary-label { font-size: 0.52rem; }
-            .summary-value { font-size: 0.88rem; }
-
-            /* Chart */
-            .chart-card { padding: 12px; border-radius: var(--r-lg); margin-bottom: 12px; }
-            .chart-card-label { font-size: 0.62rem; }
-            .chart-card-sub { font-size: 0.7rem; margin-bottom: 10px; }
+            .group-summary { margin-top: 19px; padding: 16px; }
+            .summary-label { font-size: 0.56rem; }
+            .summary-value { font-size: 0.95rem; }
 
             /* Privacy notice */
-            .privacy-notice { margin-top: 20px; margin-bottom: 80px; padding: 10px 12px; }
-            .privacy-title { font-size: 0.68rem; }
-            .privacy-body { font-size: 0.66rem; }
+            .privacy-notice { margin-top: 19px; margin-bottom: 80px; }
 
-            /* Motivation card */
-            .motivation-card { padding: 12px; gap: 10px; margin-bottom: 80px; }
-            .motivation-icon { font-size: 1.2rem; }
-            .motivation-text { font-size: 0.78rem; }
-
-            /* Members table — tighten for small screen */
-            .all-members-title { font-size: 1rem; }
-            .members-table th { padding: 8px 4px; font-size: 0.55rem; }
-            .members-table td { padding: 8px 4px; font-size: 0.72rem; }
-            .members-table .num-col { font-size: 0.68rem; }
-            .members-table th:nth-child(2) { width: 26%; }
-
-            /* Warning */
-            .warning-message { padding: 10px 12px; gap: 8px; }
-            .warning-content { font-size: 0.76rem; }
-
-            /* Mobile FAB — give it more room from bottom edge */
-            .mobile-menu-toggle { bottom: 18px; right: 16px; width: 50px; height: 50px; font-size: 1.2rem; }
+            /* Members table */
+            .members-table th { font-size: 0.6rem; }
+            .members-table td { font-size: 0.78rem; }
+            .mobile-menu-toggle { bottom: 18px; right: 16px; }
         }
 
-        /* Very small phones (iPhone SE etc) */
         @media (max-width: 360px) {
-            .main-content { padding: 10px 8px; }
-            .month-btn { font-size: 0.62rem; padding: 7px 1px; min-height: 34px; }
-            .summary-value { font-size: 0.8rem; }
-            .statement-value.closing { font-size: 1.1rem; }
-            .members-table th:nth-child(2) { width: 28%; }
+            .month-btn { font-size: 0.68rem; min-height: 36px; }
+            .header h1 { font-size: 1.3rem; }
+            .summary-value { font-size: 0.88rem; }
         }
 
         @keyframes shake {
