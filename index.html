@@ -2,7 +2,11 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#090912">
     <title>Like-Minded Folks - MMF Tracker</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%230d0d14%22/><text x=%2250%22 y=%2268%22 font-family=%22Arial,sans-serif%22 font-size=%2248%22 font-weight=%22700%22 fill=%22%2300e5a0%22 text-anchor=%22middle%22>L</text></svg>">
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
@@ -33,7 +37,7 @@
             --r-sm: 8px; --r-md: 12px; --r-lg: 18px; --r-xl: 24px;
         }
 
-        * { margin:0; padding:0; box-sizing:border-box; }
+        * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color: transparent; }
 
         body {
             font-family: 'Space Grotesk', -apple-system, sans-serif;
@@ -43,7 +47,12 @@
             background-image:
                 radial-gradient(ellipse 80% 40% at 20% 0%, rgba(0,229,160,0.05) 0%, transparent 60%),
                 radial-gradient(ellipse 60% 30% at 80% 100%, rgba(96,165,250,0.04) 0%, transparent 60%);
+            /* prevent overscroll bounce on iOS */
+            overscroll-behavior: none;
         }
+
+        /* Ensure buttons and selects are finger-friendly */
+        button, select, input { touch-action: manipulation; }
 
         /* ── LAYOUT ─────────────────────────────── */
         .app-layout {
@@ -566,14 +575,103 @@
             .sidebar.mobile-open { display: flex; }
             .sidebar-close { display: block; }
             .mobile-menu-toggle { display: flex; }
-            .main-content { padding: 20px 14px; }
-            .header h1 { font-size: 1.6rem; }
+            .main-content { padding: 16px 12px; }
+            .header { margin-bottom: 20px; }
+            .header h1 { font-size: 1.5rem; }
+            .header-sub { font-size: 0.8rem; }
+            .view-toggle { margin-bottom: 20px; }
+            .toggle-btn { padding: 9px 16px; font-size: 0.82rem; }
+
+            /* Month selector tighter on tablet */
+            .month-selector { gap: 5px; margin-bottom: 20px; }
+
+            /* Group summary closer to top */
+            .group-summary { margin: 24px auto 0; }
+
+            /* Statement card tighter */
+            .member-statement { padding: 18px 16px; }
+            .statement-alias { font-size: 1.4rem; }
+            .statement-value.closing { font-size: 1.3rem; }
+
+            /* Chart height reduced on smaller screens */
+            .chart-card { padding: 14px; }
         }
 
         @media (max-width: 480px) {
-            .month-btn { font-size: 0.72rem; padding: 9px 3px; min-height: 40px; }
-            .summary-value { font-size: 0.9rem; }
+            /* Core layout */
+            .main-content { padding: 12px 10px; }
+            .header { margin-bottom: 16px; }
+            .header-eyebrow { font-size: 0.62rem; }
+            .header h1 { font-size: 1.3rem; }
+            .header-sub { display: none; } /* reclaim vertical space */
+
+            /* Month buttons — 2 rows × 6, compact */
+            .month-selector { gap: 4px; margin-bottom: 16px; }
+            .month-btn { font-size: 0.68rem; padding: 8px 2px; min-height: 36px; border-radius: 8px; }
+
+            /* View toggle — full width buttons */
+            .view-toggle { gap: 6px; margin-bottom: 16px; }
+            .toggle-btn { flex: 1; padding: 9px 8px; font-size: 0.8rem; text-align: center; }
+
+            /* Alias selector */
+            .alias-selector { margin-bottom: 20px; }
+            .alias-selector select { padding: 13px 38px 13px 13px; font-size: 0.92rem; }
+
+            /* Statement card */
+            .member-statement { padding: 16px 14px; border-radius: var(--r-lg); margin-bottom: 14px; }
+            .statement-alias { font-size: 1.3rem; margin-bottom: 2px; }
+            .statement-month { margin-bottom: 14px; font-size: 0.78rem; }
+            .statement-row { padding: 9px 0; }
+            .statement-label { font-size: 0.82rem; }
+            .statement-value { font-size: 0.92rem; }
+            .statement-value.closing { font-size: 1.2rem; }
+            .data-timestamp { font-size: 0.68rem; margin-top: 10px; }
+
+            /* Group summary */
+            .group-summary { margin: 16px auto 0; padding: 14px; border-radius: var(--r-lg); }
+            .group-summary-title { font-size: 0.6rem; margin-bottom: 10px; }
             .group-summary-grid { gap: 5px; }
+            .summary-item { padding: 10px 6px 12px; min-height: 76px; border-radius: 8px; }
+            .summary-label { font-size: 0.52rem; }
+            .summary-value { font-size: 0.88rem; }
+
+            /* Chart */
+            .chart-card { padding: 12px; border-radius: var(--r-lg); margin-bottom: 12px; }
+            .chart-card-label { font-size: 0.62rem; }
+            .chart-card-sub { font-size: 0.7rem; margin-bottom: 10px; }
+
+            /* Privacy notice */
+            .privacy-notice { margin-top: 20px; margin-bottom: 80px; padding: 10px 12px; }
+            .privacy-title { font-size: 0.68rem; }
+            .privacy-body { font-size: 0.66rem; }
+
+            /* Motivation card */
+            .motivation-card { padding: 12px; gap: 10px; margin-bottom: 80px; }
+            .motivation-icon { font-size: 1.2rem; }
+            .motivation-text { font-size: 0.78rem; }
+
+            /* Members table — tighten for small screen */
+            .all-members-title { font-size: 1rem; }
+            .members-table th { padding: 8px 4px; font-size: 0.55rem; }
+            .members-table td { padding: 8px 4px; font-size: 0.72rem; }
+            .members-table .num-col { font-size: 0.68rem; }
+            .members-table th:nth-child(2) { width: 26%; }
+
+            /* Warning */
+            .warning-message { padding: 10px 12px; gap: 8px; }
+            .warning-content { font-size: 0.76rem; }
+
+            /* Mobile FAB — give it more room from bottom edge */
+            .mobile-menu-toggle { bottom: 18px; right: 16px; width: 50px; height: 50px; font-size: 1.2rem; }
+        }
+
+        /* Very small phones (iPhone SE etc) */
+        @media (max-width: 360px) {
+            .main-content { padding: 10px 8px; }
+            .month-btn { font-size: 0.62rem; padding: 7px 1px; min-height: 34px; }
+            .summary-value { font-size: 0.8rem; }
+            .statement-value.closing { font-size: 1.1rem; }
+            .members-table th:nth-child(2) { width: 28%; }
         }
 
         @keyframes shake {
