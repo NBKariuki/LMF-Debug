@@ -1378,7 +1378,7 @@
             );
         }
 
-        /* ── GROUP BALANCE CHART — line graph, month-by-month total + projected ── */
+        /* ── GROUP BALANCE CHART — bars (monthly totals) + projection line ── */
         function GroupBalanceChart({ data, currentMonth }) {
             const chartRef         = React.useRef(null);
             const chartInstanceRef = React.useRef(null);
@@ -1386,62 +1386,77 @@
             React.useEffect(() => {
                 if (!chartRef.current || !data) return;
                 if (chartInstanceRef.current) chartInstanceRef.current.destroy();
+
                 const ctx        = chartRef.current.getContext('2d');
                 const monthIndex = MONTHS.indexOf(currentMonth);
-                const labels     = MONTHS.map(m => m.slice(0,3));
+                const labels     = MONTHS.map(m => m.slice(0, 3));
 
-                // Actual month-by-month group totals (balance)
-                const actualBalances = [];
-                for (let i=0; i<=monthIndex; i++) {
-                    let total = 0;
-                    MEMBERS.forEach(a => { total += data[MONTHS[i]]?.[a]?.closingBalance || 0; });
-                    actualBalances.push(total);
+                // ── Monthly group top-up totals (bars, actual months only)
+                let totalTopupsAll = 0;
+                const monthlyTotals = [];
+                for (let i = 0; i <= monthIndex; i++) {
+                    let t = 0;
+                    MEMBERS.forEach(a => { t += data[MONTHS[i]]?.[a]?.topups || 0; });
+                    monthlyTotals.push(t);
+                    totalTopupsAll += t;
                 }
+                const avgMonthly = (monthIndex + 1) > 0 ? totalTopupsAll / (monthIndex + 1) : 0;
 
-                // Projection from current month forward
-                let totalContribs = 0;
-                for (let i=0; i<=monthIndex; i++) MEMBERS.forEach(a => { totalContribs += data[MONTHS[i]]?.[a]?.topups || 0; });
-                const avgMonthly = (monthIndex+1) > 0 ? totalContribs / (monthIndex+1) : 0;
+                // Bars: actual for elapsed months, null for future
+                const barData    = [...monthlyTotals, ...Array(11 - monthIndex).fill(null)];
+                const barColors  = monthlyTotals.map(() => 'rgba(0,229,160,0.65)');
+                while (barColors.length < 12) barColors.push('transparent');
+                const barBorders = monthlyTotals.map(() => '#00e5a0');
+                while (barBorders.length < 12) barBorders.push('transparent');
 
-                const actualData     = [...actualBalances, ...Array(12 - actualBalances.length).fill(null)];
-                const projectedData  = Array(12).fill(null);
-                // Start projection at last actual point
-                projectedData[monthIndex] = actualBalances[actualBalances.length - 1];
-                for (let i = monthIndex+1; i < 12; i++) {
-                    const prev = projectedData[i-1];
-                    projectedData[i] = prev + avgMonthly + (prev * ETICA_MONTHLY_YIELD);
+                // ── Group closing balance per actual month (for projection anchor)
+                const actualBalances = [];
+                for (let i = 0; i <= monthIndex; i++) {
+                    let b = 0;
+                    MEMBERS.forEach(a => { b += data[MONTHS[i]]?.[a]?.closingBalance || 0; });
+                    actualBalances.push(b);
+                }
+                const lastBal = actualBalances[actualBalances.length - 1] || 0;
+
+                // ── Projection line: starts at current balance, compounds forward
+                const projLine = Array(12).fill(null);
+                projLine[monthIndex] = lastBal;
+                for (let i = monthIndex + 1; i < 12; i++) {
+                    const prev = projLine[i - 1];
+                    projLine[i] = (prev + avgMonthly) * (1 + ETICA_MONTHLY_YIELD);
                 }
 
                 chartInstanceRef.current = new Chart(ctx, {
-                    type: 'line',
                     data: {
                         labels,
                         datasets: [
                             {
-                                label: 'Actual Group Balance',
-                                data: actualData,
-                                borderColor: '#00e5a0',
-                                backgroundColor: 'rgba(0,229,160,0.08)',
-                                borderWidth: 2.5,
-                                pointBackgroundColor: '#00e5a0',
-                                pointRadius: 4,
-                                pointHoverRadius: 6,
-                                fill: true,
-                                tension: 0.35,
-                                spanGaps: false,
+                                type: 'bar',
+                                label: 'Monthly Group Total',
+                                data: barData,
+                                backgroundColor: barColors,
+                                borderColor: barBorders,
+                                borderWidth: 1.5,
+                                borderRadius: 4,
+                                yAxisID: 'y',
+                                order: 2,
                             },
                             {
+                                type: 'line',
                                 label: 'Projected Balance',
-                                data: projectedData,
+                                data: projLine,
                                 borderColor: '#60a5fa',
-                                backgroundColor: 'rgba(96,165,250,0.05)',
+                                backgroundColor: 'transparent',
                                 borderWidth: 2,
                                 borderDash: [6, 4],
                                 pointBackgroundColor: '#60a5fa',
+                                pointBorderColor: '#60a5fa',
                                 pointRadius: 3,
                                 pointHoverRadius: 5,
                                 fill: false,
-                                tension: 0.35,
+                                tension: 0.3,
+                                yAxisID: 'y',
+                                order: 1,
                                 spanGaps: false,
                             }
                         ]
@@ -1451,22 +1466,31 @@
                         maintainAspectRatio: false,
                         interaction: { mode: 'index', intersect: false },
                         plugins: {
-                            legend: { display: true, position: 'top', labels: { color: 'rgba(240,240,248,0.55)', font:{size:11,family:'Space Grotesk'}, boxWidth:12, padding:16 } },
+                            legend: {
+                                display: true, position: 'top',
+                                labels: { color: 'rgba(240,240,248,0.55)', font: { size: 10, family: 'Space Grotesk' }, boxWidth: 10, padding: 12 }
+                            },
                             tooltip: {
                                 backgroundColor: '#1a1a2e', titleColor: '#00e5a0',
                                 bodyColor: '#f0f0f8', borderColor: 'rgba(0,229,160,0.25)', borderWidth: 1,
-                                callbacks: { label: ctx => `${ctx.dataset.label}: KES ${(ctx.parsed.y||0).toLocaleString('en-KE',{maximumFractionDigits:0})}` }
+                                callbacks: {
+                                    label: ctx => {
+                                        const v = ctx.parsed.y;
+                                        if (v === null || v === undefined) return null;
+                                        return `${ctx.dataset.label}: KES ${Math.round(v).toLocaleString()}`;
+                                    }
+                                }
                             }
                         },
                         scales: {
                             y: {
-                                beginAtZero: false,
-                                ticks: { color:'rgba(240,240,248,0.35)', font:{size:9}, callback: v => 'KES '+(v/1000).toFixed(0)+'k' },
-                                grid: { color:'rgba(255,255,255,0.04)' }
+                                beginAtZero: true,
+                                ticks: { color: 'rgba(240,240,248,0.35)', font: { size: 9 }, callback: v => 'KES ' + (v/1000).toFixed(0) + 'k' },
+                                grid: { color: 'rgba(255,255,255,0.04)' }
                             },
                             x: {
-                                ticks: { color:'rgba(240,240,248,0.35)', font:{size:9} },
-                                grid: { display:false }
+                                ticks: { color: 'rgba(240,240,248,0.35)', font: { size: 9 } },
+                                grid: { display: false }
                             }
                         }
                     }
@@ -1474,45 +1498,39 @@
                 return () => { if (chartInstanceRef.current) chartInstanceRef.current.destroy(); };
             }, [data, currentMonth]);
 
-            // Compute summary for subtitle
-            const monthIndex   = MONTHS.indexOf(currentMonth);
-            const monthsElapsed = monthIndex + 1;
+            const monthIndex    = MONTHS.indexOf(currentMonth);
+            const monthsLeft    = 11 - monthIndex;
             let totalContribs   = 0;
-            for (let i=0; i<=monthIndex; i++) MEMBERS.forEach(a => { totalContribs += data[MONTHS[i]]?.[a]?.topups || 0; });
-            const avg = monthsElapsed > 0 ? totalContribs / monthsElapsed : 0;
-            const curBal = MEMBERS.reduce((s,a) => s + (data[currentMonth]?.[a]?.closingBalance||0), 0);
-            const projDec = curBal + (avg * (12-monthsElapsed)) + (curBal * ETICA_MONTHLY_YIELD * (12-monthsElapsed));
+            for (let i = 0; i <= monthIndex; i++) MEMBERS.forEach(a => { totalContribs += data[MONTHS[i]]?.[a]?.topups || 0; });
+            const avg    = (monthIndex + 1) > 0 ? totalContribs / (monthIndex + 1) : 0;
+            const curBal = MEMBERS.reduce((s,a) => s + (data[currentMonth]?.[a]?.closingBalance || 0), 0);
+            let projDec  = curBal;
+            for (let i = 0; i < monthsLeft; i++) projDec = (projDec + avg) * (1 + ETICA_MONTHLY_YIELD);
 
             return (
                 <div className="chart-card" style={{marginBottom:'16px'}}>
-                    <div className="chart-card-label">Group Balance — Month by Month</div>
-                    <div className="chart-card-sub">Actual (green) + Projected to Dec (blue) · Projected Dec total: KES {Math.round(projDec).toLocaleString()}</div>
-                    <div style={{height:'260px', position:'relative'}}><canvas ref={chartRef}/></div>
+                    <div className="chart-card-label">Group Monthly Totals &amp; Projection</div>
+                    <div className="chart-card-sub">
+                        <span style={{color:'var(--accent)'}}>▊</span> Monthly top-up totals &nbsp;·&nbsp;
+                        <span style={{color:'var(--blue)'}}>╌╌</span> Projected group balance to Dec &nbsp;·&nbsp;
+                        Dec est: <strong style={{color:'var(--blue)'}}>KES {Math.round(projDec).toLocaleString()}</strong>
+                    </div>
+                    <div style={{height:'240px', position:'relative'}}><canvas ref={chartRef}/></div>
                 </div>
             );
         }
 
         /* ── ALL MEMBERS VIEW ──────────────────── */
         function AllMembersView({ month, members, fileLastModified, data }) {
-            const [searchQuery, setSearchQuery] = React.useState('');
-            const filtered = members.filter(m => m.alias.toLowerCase().includes(searchQuery.toLowerCase()));
-            const totalOpening = filtered.reduce((s,m)=>s+m.openingBalance, 0);
-            const totalTopups  = filtered.reduce((s,m)=>s+m.topups, 0);
-            const totalInt     = filtered.reduce((s,m)=>s+m.interest, 0);
-            const totalClosing = filtered.reduce((s,m)=>s+m.closingBalance, 0);
+            const totalOpening = members.reduce((s,m)=>s+m.openingBalance, 0);
+            const totalTopups  = members.reduce((s,m)=>s+m.topups, 0);
+            const totalInt     = members.reduce((s,m)=>s+m.interest, 0);
+            const totalClosing = members.reduce((s,m)=>s+m.closingBalance, 0);
 
             return (
                 <div>
                     <div className="all-members-header">
                         <div className="all-members-title">{month} {CURRENT_YEAR}</div>
-                        <div className="search-wrapper">
-                            <div className="search-input-wrap">
-                                <input type="text" placeholder="Search alias…" value={searchQuery}
-                                    onChange={e=>setSearchQuery(e.target.value)} className="search-input" />
-                                {searchQuery && <button onClick={()=>setSearchQuery('')} className="search-clear">×</button>}
-                            </div>
-                            <span className="search-count">{filtered.length}/{members.length}</span>
-                        </div>
                     </div>
 
                     <GroupBalanceChart data={data} currentMonth={month} />
@@ -1530,7 +1548,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                {filtered.map((member, idx) => {
+                                {members.map((member, idx) => {
                                     const dotColor = member.topups >= MINIMUM_CONTRIBUTION ? '#00e5a0' : member.topups > 0 ? '#f59e0b' : '#f87171';
                                     const dotTitle = member.topups >= MINIMUM_CONTRIBUTION ? '✅ Met minimum' : member.topups > 0 ? '⚠️ Partial' : '❌ No contribution';
                                     const rank = idx + 1;
