@@ -165,7 +165,7 @@
         }
 
         /* ── MAIN ─────────────────────────────── */
-        .main-content { flex: 1; min-width: 0; padding: 24px 20px; }
+        .main-content { flex: 1; min-width: 0; padding: 24px 20px 72px; }
 
         /* ── HEADER — centred ─────────────────── */
         .header { margin-bottom: 19px; text-align: center; }
@@ -287,8 +287,8 @@
 
         /* ── PRIVACY NOTICE ─────────────────────── */
         .privacy-notice {
-            margin-top: 28px;
-            margin-bottom: 60px;
+            margin-top: 19px;
+            margin-bottom: 0;
             padding: 11px 14px;
             background: rgba(248,113,113,0.07);
             border: 1px solid rgba(248,113,113,0.3);
@@ -334,35 +334,32 @@
         /* ── GROUP SUMMARY ───────────────────────── */
         .group-summary {
             background: var(--card); border: 1px solid var(--border-g);
-            border-radius: var(--r-xl); padding: 20px;
+            border-radius: var(--r-xl); padding: 18px 20px;
             margin: 19px auto 0; max-width: 600px;
         }
         .group-summary-title {
-            font-size: 0.68rem; font-weight: 700; color: var(--t3);
+            font-size: 0.65rem; font-weight: 700; color: var(--t3);
             letter-spacing: 0.1em; text-transform: uppercase;
             margin-bottom: 14px; text-align: center;
         }
-        /* ONE ROW, equal-width columns, label top / value bottom */
         .group-summary-grid {
-            display: flex; flex-direction: row; gap: 8px;
+            display: flex; flex-direction: column; gap: 0;
         }
         .summary-item {
-            flex: 1; background: var(--elevated); border: 1px solid var(--border);
-            border-radius: var(--r-md); padding: 14px 8px 16px; text-align: center;
-            min-width: 0; min-height: 90px;
-            display: flex; flex-direction: column;
-            justify-content: space-between; align-items: center;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 11px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
         }
+        .summary-item:last-child { border-bottom: none; padding-bottom: 0; }
+        .summary-item:first-child { padding-top: 0; }
         .summary-label {
-            font-size: 0.58rem; color: var(--t3); line-height: 1.25;
-            font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
-            align-self: flex-start; width: 100%;
+            font-size: 0.82rem; color: var(--t2);
+            font-weight: 500;
         }
         .summary-value {
-            font-size: 1.05rem; font-weight: 700;
+            font-size: 1rem; font-weight: 700;
             color: var(--blue); font-family: 'JetBrains Mono', monospace;
-            line-height: 1.2; word-break: break-all;
-            align-self: flex-end; width: 100; margin-top: 8px;
+            white-space: nowrap;
         }
 
         /* ── CHART CARD ─────────────────────────── */
@@ -611,12 +608,10 @@
             .statement-value.closing { font-size: 1.25rem; }
 
             /* Group summary */
-            .group-summary { margin-top: 19px; padding: 16px; }
-            .summary-label { font-size: 0.56rem; }
-            .summary-value { font-size: 0.95rem; }
+            .group-summary { margin-top: 19px; padding: 16px 18px; }
 
             /* Privacy notice */
-            .privacy-notice { margin-top: 19px; margin-bottom: 80px; }
+            .privacy-notice { margin-top: 19px; }
 
             /* Members table */
             .members-table th { font-size: 0.6rem; }
@@ -1458,12 +1453,12 @@
                                     <div className="summary-value">KES {stats.cumulativeContributions.toLocaleString('en-KE',{maximumFractionDigits:0})}</div>
                                 </div>
                                 <div className="summary-item">
-                                    <div className="summary-label">Total Interest</div>
+                                    <div className="summary-label">Total Interest Earned</div>
                                     <div className="summary-value">KES {stats.cumulativeInterest.toLocaleString('en-KE',{maximumFractionDigits:0})}</div>
                                 </div>
                                 <div className="summary-item">
                                     <div className="summary-label">Group Balance</div>
-                                    <div className="summary-value">KES {stats.totalBalance.toLocaleString('en-KE',{maximumFractionDigits:0})}</div>
+                                    <div className="summary-value" style={{color:'var(--accent)'}}>KES {stats.totalBalance.toLocaleString('en-KE',{maximumFractionDigits:0})}</div>
                                 </div>
                             </div>
                         </div>
