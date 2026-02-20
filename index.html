@@ -168,8 +168,7 @@
         .main-content { flex: 1; min-width: 0; padding: 24px 20px 72px; }
 
         /* ── HEADER — centred ─────────────────── */
-        .header { margin-bottom: 19px; text-align: center; }
-        .header-eyebrow {
+        .header { margin-bottom: 19px; text-align: center; }        .header-eyebrow {
             font-size: 0.72rem; font-weight: 700; letter-spacing: 0.12em;
             text-transform: uppercase; color: var(--accent); margin-bottom: 4px;
             display: flex; align-items: center; justify-content: center; gap: 8px;
@@ -182,12 +181,19 @@
         }
         .header-sub { color: var(--t2); font-size: 0.88rem; font-weight: 500; }
 
-        /* ── MONTH SELECTOR — 5mm below header ── */
+        /* ── SECTION LABELS ──────────────────────── */
+        .section-label {
+            font-size: 0.65rem; font-weight: 700; color: var(--t3);
+            text-transform: uppercase; letter-spacing: 0.1em;
+            margin-bottom: 8px;
+        }
+
+        /* ── MONTH SELECTOR — 5mm above label, 10mm below grid ─── */
         .month-selector {
             display: grid;
             grid-template-columns: repeat(6, 1fr);
             gap: 6px;
-            margin-bottom: 19px;
+            margin-bottom: 38px;
             width: 100%;
         }
         .month-btn {
@@ -209,8 +215,8 @@
             box-shadow: 0 2px 14px rgba(0,229,160,0.32);
         }
 
-        /* ── VIEW TOGGLE — 5mm below months ───── */
-        .view-toggle { display: flex; gap: 8px; margin-bottom: 19px; }
+        /* ── VIEW TOGGLE — 10mm below view section ─ */
+        .view-toggle { display: flex; gap: 8px; margin-bottom: 38px; }
         .toggle-btn {
             padding: 10px 20px;
             border: 1px solid var(--border);
@@ -589,11 +595,11 @@
             .header-sub { font-size: 0.84rem; }
 
             /* Month buttons */
-            .month-selector { gap: 5px; margin-bottom: 19px; }
+            .month-selector { gap: 5px; margin-bottom: 38px; }
             .month-btn { font-size: 0.76rem; padding: 9px 3px; min-height: 40px; }
 
             /* View toggle */
-            .view-toggle { gap: 6px; margin-bottom: 19px; }
+            .view-toggle { gap: 6px; margin-bottom: 38px; }
             .toggle-btn { flex: 1; text-align: center; font-size: 0.84rem; }
 
             /* Alias — 10mm gap below */
@@ -1145,6 +1151,7 @@
                             </div>
 
                             {/* MONTH SELECTOR — 2 rows × 6 cols */}
+                            <div className="section-label">Select Month</div>
                             <div className="month-selector">
                                 {MONTHS.map(month => (
                                     <button key={month}
@@ -1155,6 +1162,7 @@
                                 ))}
                             </div>
 
+                            <div className="section-label">View</div>
                             <div className="view-toggle">
                                 <button className={`toggle-btn${view==='member'?' active':''}`} onClick={()=>setView('member')}>📱 My Balance</button>
                                 <button className={`toggle-btn${view==='all'?' active':''}`}    onClick={()=>setView('all')}>👥 All Members</button>
