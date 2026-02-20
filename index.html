@@ -656,22 +656,12 @@
         const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 
                        'July', 'August', 'September', 'October', 'November', 'December'];
         
-        const ENCODED_CSV_URLS = [
-            "aHR0cHM6Ly9kb2NzLmdvb2dsZS5jb20vc3ByZWFkc2hlZXRzL2QvZS8yUEFDWC0xdlN2RXUzZVhzd0FRSXZ6Y2dZVE5ZSkFNTEhad0F6Z0REOExxVWl1MHRtQzhTalRXVWlfWjFZQkowWlJoeW93ZkpBNUJJT1VQVkp5N3R2ai9wdWI/Z2lkPTE4ODE3NjExNTQmc2luZ2xlPXRydWUmb3V0cHV0PWNzdg==",
-            "aHR0cHM6Ly9kb2NzLmdvb2dsZS5jb20vc3ByZWFkc2hlZXRzL2QvZS8yUEFDWC0xdlN2RXUzZVhzd0FRSXZ6Y2dZVE5ZSkFNTEhad0F6Z0REOExxVWl1MHRtQzhTalRXVWlfWjFZQkowWlJoeW93ZkpBNUJJT1VQVkp5N3R2ai9wdWI/Z2lkPTExODIwNzc2Mjcmc2luZ2xlPXRydWUmb3V0cHV0PWNzdg==",
-            "aHR0cHM6Ly9kb2NzLmdvb2dsZS5jb20vc3ByZWFkc2hlZXRzL2QvZS8yUEFDWC0xdlN2RXUzZVhzd0FRSXZ6Y2dZVE5ZSkFNTEhad0F6Z0REOExxVWl1MHRtQzhTalRXVWlfWjFZQkowWlJoeW93ZkpBNUJJT1VQVkp5N3R2ai9wdWI/Z2lkPTExNDkyMjYwMjQmc2luZ2xlPXRydWUmb3V0cHV0PWNzdg==",
-            "aHR0cHM6Ly9kb2NzLmdvb2dsZS5jb20vc3ByZWFkc2hlZXRzL2QvZS8yUEFDWC0xdlN2RXUzZVhzd0FRSXZ6Y2dZVE5ZSkFNTEhad0F6Z0REOExxVWl1MHRtQzhTalRXVWlfWjFZQkowWlJoeW93ZkpBNUJJT1VQVkp5N3R2ai9wdWI/Z2lkPTk2MjExMTcwNCZzaW5nbGU9dHJ1ZSZvdXRwdXQ9Y3N2",
-            "aHR0cHM6Ly9kb2NzLmdvb2dsZS5jb20vc3ByZWFkc2hlZXRzL2QvZS8yUEFDWC0xdlN2RXUzZVhzd0FRSXZ6Y2dZVE5ZSkFNTEhad0F6Z0REOExxVWl1MHRtQzhTalRXVWlfWjFZQkowWlJoeW93ZkpBNUJJT1VQVkp5N3R2ai9wdWI/Z2lkPTUxNDQ5Mjc4MiZzaW5nbGU9dHJ1ZSZvdXRwdXQ9Y3N2",
-            "aHR0cHM6Ly9kb2NzLmdvb2dsZS5jb20vc3ByZWFkc2hlZXRzL2QvZS8yUEFDWC0xdlN2RXUzZVhzd0FRSXZ6Y2dZVE5ZSkFNTEhad0F6Z0REOExxVWl1MHRtQzhTalRXVWlfWjFZQkowWlJoeW93ZkpBNUJJT1VQVkp5N3R2ai9wdWI/Z2lkPTU5OTQ2MTg1NyZzaW5nbGU9dHJ1ZSZvdXRwdXQ9Y3N2",
-            "aHR0cHM6Ly9kb2NzLmdvb2dsZS5jb20vc3ByZWFkc2hlZXRzL2QvZS8yUEFDWC0xdlN2RXUzZVhzd0FRSXZ6Y2dZVE5ZSkFNTEhad0F6Z0REOExxVWl1MHRtQzhTalRXVWlfWjFZQkowWlJoeW93ZkpBNUJJT1VQVkp5N3R2ai9wdWI/Z2lkPTcwMzc5MjUzMCZzaW5nbGU9dHJ1ZSZvdXRwdXQ9Y3N2",
-            "aHR0cHM6Ly9kb2NzLmdvb2dsZS5jb20vc3ByZWFkc2hlZXRzL2QvZS8yUEFDWC0xdlN2RXUzZVhzd0FRSXZ6Y2dZVE5ZSkFNTEhad0F6Z0REOExxVWl1MHRtQzhTalRXVWlfWjFZQkowWlJoeW93ZkpBNUJJT1VQVkp5N3R2ai9wdWI/Z2lkPTIwOTM3MDg5Nzkmc2luZ2xlPXRydWUmb3V0cHV0PWNzdg==",
-            "aHR0cHM6Ly9kb2NzLmdvb2dsZS5jb20vc3ByZWFkc2hlZXRzL2QvZS8yUEFDWC0xdlN2RXUzZVhzd0FRSXZ6Y2dZVE5ZSkFNTEhad0F6Z0REOExxVWl1MHRtQzhTalRXVWlfWjFZQkowWlJoeW93ZkpBNUJJT1VQVkp5N3R2ai9wdWI/Z2lkPTEwNzkyMzcwNDMmc2luZ2xlPXRydWUmb3V0cHV0PWNzdg==",
-            "aHR0cHM6Ly9kb2NzLmdvb2dsZS5jb20vc3ByZWFkc2hlZXRzL2QvZS8yUEFDWC0xdlN2RXUzZVhzd0FRSXZ6Y2dZVE5ZSkFNTEhad0F6Z0REOExxVWl1MHRtQzhTalRXVWlfWjFZQkowWlJoeW93ZkpBNUJJT1VQVkp5N3R2ai9wdWI/Z2lkPTM2MjM4OTY0MCZzaW5nbGU9dHJ1ZSZvdXRwdXQ9Y3N2",
-            "aHR0cHM6Ly9kb2NzLmdvb2dsZS5jb20vc3ByZWFkc2hlZXRzL2QvZS8yUEFDWC0xdlN2RXUzZVhzd0FRSXZ6Y2dZVE5ZSkFNTEhad0F6Z0REOExxVWl1MHRtQzhTalRXVWlfWjFZQkowWlJoeW93ZkpBNUJJT1VQVkp5N3R2ai9wdWI/Z2lkPTM1MDMxNTkyMiZzaW5nbGU9dHJ1ZSZvdXRwdXQ9Y3N2",
-            "aHR0cHM6Ly9kb2NzLmdvb2dsZS5jb20vc3ByZWFkc2hlZXRzL2QvZS8yUEFDWC0xdlN2RXUzZVhzd0FRSXZ6Y2dZVE5ZSkFNTEhad0F6Z0REOExxVWl1MHRtQzhTalRXVWlfWjFZQkowWlJoeW93ZkpBNUJJT1VQVkp5N3R2ai9wdWI/Z2lkPTEwMTY1NjE3OTgmc2luZ2xlPXRydWUmb3V0cHV0PWNzdg=="
-        ];
-        
-        const decodeURL = (encoded) => atob(encoded);
+        // ── ONEDRIVE SOURCE ──────────────────────────────────────────
+        // Reads directly from your Excel file on OneDrive via Microsoft Graph API.
+        // No copying to Google Sheets needed. Just save the Excel and the app updates.
+        const ONEDRIVE_SHARE_TOKEN = 'u!aHR0cHM6Ly8xZHJ2Lm1zL3gvYy81YjI5NWY1ODVhZmE3ZjJmL0lRRGVBdDZaWE5JUVJZTG9FMng4ZTBZdEFla0ZndTNCdDJlZ2JFbVR2UFZGN1dRP2U9ZzhiWG9w';
+        const GRAPH_BASE = `https://graph.microsoft.com/v1.0/shares/${ONEDRIVE_SHARE_TOKEN}/driveItem/workbook/worksheets`;
+        const sheetUrl = (month) => `${GRAPH_BASE}('${month}')/usedRange?$select=values`;
         const calculateMovingAverage = (data, windowSize = 2) => {
             if (data.length < windowSize) return data;
             const result = [];
@@ -686,8 +676,7 @@
             return result;
         };
         
-        const MONTH_CSV_URLS = {};
-        MONTHS.forEach((month, index) => { MONTH_CSV_URLS[month] = decodeURL(ENCODED_CSV_URLS[index]); });
+        
         
         const MINIMUM_CONTRIBUTION = 4000;
         const ETICA_ANNUAL_YIELD   = 0.12;
@@ -799,7 +788,7 @@
         }
 
         function calculateMemberArchetype(memberData, allMembersData, currentMonth) {
-            const { totalTopups, currentMonthTopup, closingBalance, daysActive, previousMonthTopup } = memberData;
+            const { totalTopups, currentMonthTopup, closingBalance, previousMonthTopup } = memberData;
             const monthIndex = MONTHS.indexOf(currentMonth);
             const monthsElapsed = monthIndex + 1;
             const sortedMembers = [...allMembersData].sort((a,b) => b.closingBalance - a.closingBalance);
@@ -815,7 +804,6 @@
             }
             const avgDeposit = monthsElapsed > 0 ? totalTopups / monthsElapsed : 0;
             if (rank <= 3 && closingBalance > 0) return 'OVERACHIEVER';
-            if (daysActive <= 5 && currentMonthTopup >= MINIMUM_CONTRIBUTION) return 'EARLY_BIRD';
             if (avgDeposit > MINIMUM_CONTRIBUTION * 2) return 'BIG_DEPOSITOR';
             if (currentMonthTopup >= MINIMUM_CONTRIBUTION) {
                 const variance = Math.abs(currentMonthTopup - avgDeposit) / (avgDeposit || 1);
@@ -983,53 +971,50 @@
             const [mobileMenuOpen, setMobileMenuOpen]     = useState(false);
             const [tourSidebarActive, setTourSidebarActive] = useState(false);
 
-            useEffect(() => { loadDataFromGoogleSheets(); }, []);
+            useEffect(() => { loadData(); }, []);
 
-            const loadDataFromGoogleSheets = async () => {
+            const loadData = async () => {
                 try {
                     setLoading(true); setError(null);
                     const parsedData = {};
+
                     const results = await Promise.all(MONTHS.map(async month => {
-                        const url  = MONTH_CSV_URLS[month];
-                        const resp = await fetch(`${url}&_=${Date.now()}`, {
+                        const resp = await fetch(sheetUrl(month), {
                             cache: 'no-store',
-                            headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate', 'Pragma': 'no-cache' }
+                            headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate' }
                         });
-                        if (!resp.ok) throw new Error(`Could not load ${month} data`);
-                        const text  = await resp.text();
-                        const lines = text.split('\n').filter(l => l.trim());
+                        if (!resp.ok) throw new Error(`Could not load ${month} (${resp.status})`);
+                        const json = await resp.json();
+
+                        // Excel sheet layout:
+                        // Row 0: title  Row 1: blank  Row 2: headers
+                        // Row 3+: member data  [Alias, OpenBal, Topups, Interest, DaysActive, ClosingBal]
+                        const rows = json.values || [];
                         const mdata = {};
-                        for (let i = 3; i < lines.length; i++) {
-                            const cols  = parseCSVLine(lines[i]);
-                            const alias = cols[0]?.trim().replace(/"/g,'');
-                            if (alias && MEMBERS.includes(alias)) {
-                                const n = s => parseFloat((s||'').replace(/["',\s]/g,'')) || 0;
-                                mdata[alias] = {
-                                    openingBalance: n(cols[1]), topups: n(cols[2]),
-                                    interest: n(cols[3]), daysActive: parseInt((cols[4]||'').replace(/[",\s]/g,''))||0,
-                                    closingBalance: n(cols[5])
-                                };
-                            }
+                        for (let i = 3; i < rows.length; i++) {
+                            const row   = rows[i];
+                            const alias = (row[0] || '').toString().trim();
+                            if (!alias || !MEMBERS.includes(alias)) continue;
+                            const n = v => parseFloat((v || '0').toString().replace(/,/g,'')) || 0;
+                            mdata[alias] = {
+                                openingBalance: n(row[1]),
+                                topups:         n(row[2]),
+                                interest:       n(row[3]),
+                                closingBalance: n(row[5])   // col 4 = Days Active (ignored)
+                            };
                         }
                         return { month, monthData: mdata };
                     }));
+
                     results.forEach(({ month, monthData }) => { parsedData[month] = monthData; });
-                    setData(parsedData); setFileLastModified(new Date()); setLoading(false);
+                    setData(parsedData);
+                    setFileLastModified(new Date());
+                    setLoading(false);
                 } catch(err) {
                     console.error(err);
-                    setError('Unable to load data from Google Sheets. Please refresh or contact the admin.');
+                    setError('Unable to load data from OneDrive. Please check your connection and refresh.');
                     setLoading(false);
                 }
-            };
-
-            const parseCSVLine = (line) => {
-                const result = []; let cur = ''; let inQ = false;
-                for (const ch of line) {
-                    if (ch === '"') inQ = !inQ;
-                    else if (ch === ',' && !inQ) { result.push(cur); cur=''; }
-                    else cur += ch;
-                }
-                result.push(cur); return result;
             };
 
             const getAllMembersData = (month) => MEMBERS.map(alias => ({
@@ -1061,7 +1046,7 @@
                 <div className="app-layout"><div className="main-content"><div className="loading"><div className="loading-spinner"/><div className="loading-text">Loading your data…</div></div></div></div>
             );
             if (error) return (
-                <div className="app-layout"><div className="main-content"><div className="error"><p>{error}</p><button className="btn-secondary" onClick={loadDataFromGoogleSheets}>↺ Retry</button></div></div></div>
+                <div className="app-layout"><div className="main-content"><div className="error"><p>{error}</p><button className="btn-secondary" onClick={loadData}>↺ Retry</button></div></div></div>
             );
 
             const stats = calculateGroupStats();
