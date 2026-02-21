@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -451,55 +452,54 @@
 </div>
 
 <script>
-// ── CONFIG ────────────────────────────────────────────────────
-const ADMIN_PIN       = '1234';   // UI gate — must match SERVER_PIN in Apps Script
+// UI gate only — real security is server-side in Apps Script
+const ADMIN_PIN       = '1234';  // must match SERVER_PIN in Apps Script
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyqEfsYI_8AKAlYfuUyzoiYbLRYXTQJVYgVygEXysGlwE5cMwQVDcsdI_c9LyYJOLXy/exec';
 
-// Stable device token for audit log
-var CLIENT_TOKEN = 'dev_' + Math.random().toString(36).slice(2,10);
-try {
-    var stored = localStorage.getItem('lmf_token');
-    if (stored) { CLIENT_TOKEN = stored; }
-    else { localStorage.setItem('lmf_token', CLIENT_TOKEN); }
-} catch(e) {}
-var DEVICE_INFO = (navigator.userAgent || 'unknown').slice(0, 120);
+// Stable device token for audit trail & rate limiting
+const CLIENT_TOKEN = (()=>{
+    try {
+        let t = localStorage.getItem('lmf_token');
+        if (!t) { t = 'dev_' + Math.random().toString(36).slice(2,10) + '_' + Date.now(); localStorage.setItem('lmf_token',t); }
+        return t;
+    } catch(e) { return 'dev_' + Math.random().toString(36).slice(2,10); }
+})();
+const DEVICE_INFO = navigator.userAgent.slice(0,150);
 
-// ── STATE ─────────────────────────────────────────────────────
-var payMethod   = 'MPESA';
-var creditMode  = 'single';
-var splitCnt    = 0;
-var sessionLog  = [];
-var usedCodes   = {};
-var pin         = '';
+let method     = 'MPESA';
+let creditMode = 'single';
+let splitCnt   = 0;
+let log        = [];
+let usedCodes  = new Set();
+let pin        = '';
+let enteredPin = '';  // captured at login, sent with every submission
 
-// Confirm modal state
-var confirmPin     = '';
-var pendingPayload = null;
-
-var MEMBERS = [
+const MEMBERS = [
     'Tokyo','Berlin','Gandia','Denver','Helsinki','Oslo','Moscow',
     'California','Lisbon','Stockholm','Paris','Marseille','Rio','Nairobi',
     'Tel Aviv','Valencia','Havana','Manilla','Scofield','Bogota',
     'Emirates','Dublin','Doha','Bern'
-];
+]; // 24 members — California & Lisbon are separate, Paris & Marseille are separate
 
-// ── INIT ──────────────────────────────────────────────────────
-window.onload = function() {
+document.addEventListener('DOMContentLoaded', () => {
     setToday();
     addRow(); addRow();
-    var mo = document.getElementById('confirmOverlay');
-    if (mo) { console.log('Modal OK'); }
-    else    { console.error('Modal element MISSING'); }
-};
+    // Verify modal element exists
+    const mo = document.getElementById('confirmOverlay');
+    if (!mo) {
+        console.error('CRITICAL: confirmOverlay element not found in DOM');
+    } else {
+        console.log('✓ Modal ready');
+    }
+});
 
 function setToday() {
-    var d  = new Date();
-    var mm = ('0'+(d.getMonth()+1)).slice(-2);
-    var dd = ('0'+d.getDate()).slice(-2);
-    document.getElementById('depDate').value = d.getFullYear()+'-'+mm+'-'+dd;
+    const d = new Date();
+    document.getElementById('depDate').value =
+        `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
 
-// ── LOCK SCREEN NUMPAD ────────────────────────────────────────
+/* ── NUMPAD ─────────────────────────────────────────────────── */
 function nk(d) {
     if (pin.length >= 4) return;
     pin += d;
@@ -508,73 +508,73 @@ function nk(d) {
 }
 function nkDel() { pin = pin.slice(0,-1); dots(); }
 function dots() {
-    for (var i=0;i<4;i++)
-        document.getElementById('d'+i).classList.toggle('on', i < pin.length);
+    for (let i=0;i<4;i++) document.getElementById('d'+i).classList.toggle('on', i<pin.length);
 }
 function checkPin() {
     if (pin === ADMIN_PIN) {
-        document.getElementById('lockScreen').style.display = 'none';
-        document.getElementById('mainForm').style.display   = 'block';
+        enteredPin = pin;  // store for server-side verification
+        document.getElementById('lockScreen').style.display='none';
+        document.getElementById('mainForm').style.display='block';
     } else {
-        document.getElementById('pinErr').textContent = '❌ Wrong PIN — try again';
-        pin = ''; dots();
-        setTimeout(function(){ document.getElementById('pinErr').textContent = ''; }, 2000);
+        document.getElementById('pinErr').textContent='❌ Wrong PIN — try again';
+        pin=''; dots();
+        setTimeout(()=>document.getElementById('pinErr').textContent='', 2000);
     }
 }
 
-// ── DUPLICATE CHECK ───────────────────────────────────────────
+/* ── DUPLICATE CHECK ─────────────────────────────────────────── */
+function extractCode(text) {
+    const m = text.match(/^([A-Z0-9]{10})\s+Confirmed/i);
+    return m ? m[1].toUpperCase() : null;
+}
+function markDup(isDup) {
+    document.getElementById('dupBan').classList.toggle('show', isDup);
+    document.getElementById('msgBox').classList.toggle('dup', isDup);
+}
 function chkDup() {
-    var msg  = document.getElementById('msgBox').value;
-    var m    = msg.match(/^([A-Z0-9]{10})\s+Confirmed/i);
-    var code = m ? m[1].toUpperCase() : null;
-    var isDup = code && usedCodes[code];
-    document.getElementById('dupBan').classList.toggle('show', !!isDup);
-    document.getElementById('msgBox').classList.toggle('dup', !!isDup);
+    const code = extractCode(document.getElementById('msgBox').value);
+    markDup(code ? usedCodes.has(code) : false);
 }
 function onCode() {
-    var el = document.getElementById('refCode');
+    const el = document.getElementById('refCode');
+    const p  = el.selectionStart;
     el.value = el.value.toUpperCase();
-    var c = el.value.trim();
-    if (c.length === 10) {
-        var isDup = !!usedCodes[c];
-        document.getElementById('dupBan').classList.toggle('show', isDup);
-    }
+    el.setSelectionRange(p,p);
+    const c = el.value.trim();
+    if (c.length===10) markDup(usedCodes.has(c));
 }
 
-// ── M-PESA PARSER ─────────────────────────────────────────────
+/* ── M-PESA PARSER ───────────────────────────────────────────── */
 function parseMsg() {
-    var msg   = document.getElementById('msgBox').value.trim();
-    var warn  = document.getElementById('exWarn');
+    const msg  = document.getElementById('msgBox').value.trim();
+    const warn = document.getElementById('exWarn');
     warn.textContent = '';
     if (!msg) { stat('err','Paste an M-PESA message first.'); return; }
 
-    var codeM = msg.match(/^([A-Z0-9]{10})\s+Confirmed/i);
-    var amtM  = msg.match(/Ksh([\d,]+(?:\.\d+)?)\s+sent/i);
-    var dateM = msg.match(/on\s+(\d{1,2})\/(\d{1,2})\/(\d{2,4})/i);
-    var acctM = msg.match(/for account\s+(\S+)/i);
+    const codeM = msg.match(/^([A-Z0-9]{10})\s+Confirmed/i);
+    const amtM  = msg.match(/Ksh([\d,]+(?:\.\d+)?)\s+sent/i);
+    const dateM = msg.match(/on\s+(\d{1,2})\/(\d{1,2})\/(\d{2,4})/i);
+    const acctM = msg.match(/for account\s+(\S+)/i);
 
-    if (!codeM && !amtM) {
-        warn.textContent = '⚠️ Cannot read message — check format.';
-        document.getElementById('excard').classList.add('show'); return;
-    }
+    if (!codeM && !amtM) { warn.textContent='⚠️ Cannot read message — check format.'; document.getElementById('excard').classList.add('show'); return; }
 
     if (codeM) {
-        var code = codeM[1].toUpperCase();
-        if (usedCodes[code]) { document.getElementById('dupBan').classList.add('show'); return; }
+        const code = codeM[1].toUpperCase();
+        if (usedCodes.has(code)) { markDup(true); return; }
         document.getElementById('refCode').value     = code;
         document.getElementById('exCode').textContent = code;
     }
     if (amtM) {
-        var amt = Math.round(parseFloat(amtM[1].replace(/,/g,'')));
+        const amt = Math.round(parseFloat(amtM[1].replace(/,/g,'')));
         document.getElementById('totalAmt').value    = amt;
         document.getElementById('exAmt').textContent = 'KES '+amt.toLocaleString();
         updBal();
     }
     if (dateM) {
-        var yr  = parseInt(dateM[3]); if (yr < 100) yr += 2000;
-        var iso = yr+'-'+('0'+dateM[2]).slice(-2)+'-'+('0'+dateM[1]).slice(-2);
+        let yr = parseInt(dateM[3]); if (yr<100) yr+=2000;
+        const iso = `${yr}-${String(dateM[2]).padStart(2,'0')}-${String(dateM[1]).padStart(2,'0')}`;
         document.getElementById('depDate').value     = iso;
-        document.getElementById('exDate').textContent = new Date(iso+'T12:00:00').toLocaleDateString('en-KE',{day:'numeric',month:'short',year:'numeric'});
+        document.getElementById('exDate').textContent = new Date(iso).toLocaleDateString('en-KE',{day:'numeric',month:'short',year:'numeric'});
     } else {
         document.getElementById('exDate').textContent = 'Not found — using today';
         warn.textContent = '⚠️ Date missing — confirm below.';
@@ -582,276 +582,252 @@ function parseMsg() {
     document.getElementById('exAcct').textContent = acctM ? acctM[1] : '—';
     document.getElementById('excard').classList.add('show');
     setMethod('MPESA');
-    setTimeout(function(){ document.getElementById('fromMember').focus(); }, 200);
+    setTimeout(()=>document.getElementById('fromMember').focus(), 200);
 }
 
-// ── AUTO-FILL CREDIT FROM SENDER ──────────────────────────────
+/* ── AUTO-FILL CREDIT FROM SENDER ────────────────────────────── */
 function onFrom() {
-    var from = document.getElementById('fromMember').value;
+    const from = document.getElementById('fromMember').value;
     if (!from) return;
-    var cm = document.getElementById('creditMem');
-    if (!cm.value) cm.value = from;
-    var fs = document.querySelector('.s-sel');
-    if (fs && !fs.value) fs.value = from;
+    // Auto-set credit member only if blank
+    const cm = document.getElementById('creditMem');
+    if (cm.value === '') cm.value = from;
+    // Auto-set first split row only if blank
+    const fs = document.querySelector('.s-sel');
+    if (fs && fs.value === '') fs.value = from;
 }
 
-// ── METHOD ────────────────────────────────────────────────────
+/* ── METHOD ──────────────────────────────────────────────────── */
 function setMethod(m) {
-    payMethod = m;
+    method = m;
     document.getElementById('btnM').classList.toggle('on', m==='MPESA');
     document.getElementById('btnB').classList.toggle('on', m==='BANK');
 }
 
-// ── CREDIT MODE ───────────────────────────────────────────────
+/* ── CREDIT MODE ─────────────────────────────────────────────── */
 function setCredit(mode) {
     creditMode = mode;
     document.getElementById('ctS').classList.toggle('on',  mode==='single');
     document.getElementById('ctSp').classList.toggle('on', mode==='split');
-    document.getElementById('singDiv').style.display  = mode==='single' ? 'block' : 'none';
-    document.getElementById('splitDiv').style.display = mode==='split'  ? 'block' : 'none';
+    document.getElementById('singDiv').style.display  = mode==='single'?'block':'none';
+    document.getElementById('splitDiv').style.display = mode==='split'?'block':'none';
     updBal();
 }
 
-// ── SPLIT ROWS ────────────────────────────────────────────────
+/* ── SPLIT ROWS ──────────────────────────────────────────────── */
 function addRow() {
     splitCnt++;
-    var id  = 'sr'+splitCnt;
-    var div = document.createElement('div');
-    div.className = 'srow'; div.id = id;
-    var opts = MEMBERS.map(function(m){ return '<option>'+m+'</option>'; }).join('');
-    div.innerHTML =
-        '<div class="ssw"><span class="ii">👤</span>'+
-        '<select class="s-sel" onchange="updBal()">'+
-        '<option value="" disabled selected>Member</option>'+opts+'</select></div>'+
-        '<div class="saw"><span class="kpfx">KES</span>'+
-        '<input type="number" class="s-amt mono" placeholder="0" min="0" inputmode="decimal" oninput="updBal()"></div>'+
-        '<button class="sdel" onclick="delRow(''+id+'')">✕</button>';
+    const id  = 'sr'+splitCnt;
+    const div = document.createElement('div');
+    div.className='srow'; div.id=id;
+    div.innerHTML=`
+        <div class="ssw"><span class="ii">👤</span>
+            <select class="s-sel" onchange="updBal()">
+                <option value="" disabled selected>Member</option>
+                ${MEMBERS.map(m=>`<option>${m}</option>`).join('')}
+            </select></div>
+        <div class="saw"><span class="kpfx">KES</span>
+            <input type="number" class="s-amt mono" placeholder="0" min="0" inputmode="decimal" oninput="updBal()">
+        </div>
+        <button class="sdel" onclick="delRow('${id}')">✕</button>`;
     document.getElementById('splitRows').appendChild(div);
     updBal();
 }
-function delRow(id) {
-    var el = document.getElementById(id);
-    if (el) el.remove();
-    updBal();
-}
+function delRow(id) { const el=document.getElementById(id); if(el)el.remove(); updBal(); }
 
-// ── BALANCE ───────────────────────────────────────────────────
+/* ── BALANCE ─────────────────────────────────────────────────── */
 function updBal() {
-    if (creditMode !== 'split') return;
-    var total = parseFloat(document.getElementById('totalAmt').value) || 0;
-    var alloc = 0;
-    document.querySelectorAll('.s-amt').forEach(function(i){ alloc += parseFloat(i.value)||0; });
-    var rem = total - alloc;
-    var el  = document.getElementById('balVal');
-    el.className = 'balval ' + (rem===0 ? 'bok' : rem<0 ? 'bover' : 'bund');
-    el.textContent = (rem===0?'✅ ':'') + 'KES ' + Math.abs(rem).toLocaleString() +
-        (rem>0 ? ' remaining' : rem<0 ? ' OVER!' : ' balanced');
+    if (creditMode!=='split') return;
+    const total  = parseFloat(document.getElementById('totalAmt').value)||0;
+    const alloc  = Array.from(document.querySelectorAll('.s-amt')).reduce((s,i)=>s+(parseFloat(i.value)||0),0);
+    const rem    = total - alloc;
+    const el     = document.getElementById('balVal');
+    el.className = 'balval '+(rem===0?'bok':rem<0?'bover':'bund');
+    el.textContent=(rem===0?'✅ ':'')+'KES '+Math.abs(rem).toLocaleString()+(rem>0?' remaining':rem<0?' OVER!':' balanced');
 }
 
-// ── SUBMIT — called by button ─────────────────────────────────
+/* ── SUBMIT ──────────────────────────────────────────────────── */
 function triggerSubmit() {
-    var from  = document.getElementById('fromMember').value;
-    var amt   = parseFloat(document.getElementById('totalAmt').value);
-    var code  = document.getElementById('refCode').value.trim().toUpperCase();
-    var date  = document.getElementById('depDate').value;
-    var notes = document.getElementById('notes').value.trim();
+    handleSubmit().catch(function(err) {
+        console.error('Submit error:', err);
+        stat('err', '❌ Error: ' + err.message);
+        document.getElementById('subBtn').disabled = false;
+        document.getElementById('subLbl').textContent = 'Log Deposit';
+    });
+}
 
-    if (!from)              return stat('err','Select who made the deposit.');
-    if (!amt || amt <= 0)   return stat('err','Enter the deposit amount.');
-    if (!code)              return stat('err','Enter the reference code.');
-    if (!date)              return stat('err','Confirm the deposit date.');
-    if (usedCodes[code])    return stat('err','⛔ Code already logged this session.');
+async function handleSubmit() {
+    const from  = document.getElementById('fromMember').value;
+    const amt   = parseFloat(document.getElementById('totalAmt').value);
+    const code  = document.getElementById('refCode').value.trim().toUpperCase();
+    const date  = document.getElementById('depDate').value;
+    const notes = document.getElementById('notes').value.trim();
 
-    var credits = [];
-    if (creditMode === 'single') {
-        var to = document.getElementById('creditMem').value;
+    if (!from)            return stat('err','Select who made the deposit.');
+    if (!amt||amt<=0)     return stat('err','Enter the deposit amount.');
+    if (!code)            return stat('err','Enter the reference code.');
+    if (!date)            return stat('err','Confirm the deposit date.');
+    if (usedCodes.has(code)) return stat('err','⛔ Code already logged this session.');
+
+    let credits=[];
+    if (creditMode==='single') {
+        const to=document.getElementById('creditMem').value;
         if (!to) return stat('err','Select a member to credit.');
-        credits = [{alias:to, amount:amt}];
+        credits=[{alias:to,amount:amt}];
     } else {
-        document.querySelectorAll('.srow').forEach(function(r) {
-            var a = r.querySelector('.s-sel').value;
-            var v = parseFloat(r.querySelector('.s-amt').value) || 0;
-            if (a && v > 0) credits.push({alias:a, amount:v});
+        document.querySelectorAll('.srow').forEach(r=>{
+            const a=r.querySelector('.s-sel').value;
+            const v=parseFloat(r.querySelector('.s-amt').value)||0;
+            if(a&&v>0) credits.push({alias:a,amount:v});
         });
-        if (!credits.length) return stat('err','Add at least one member to the split.');
-        var tot = credits.reduce(function(s,c){ return s+c.amount; }, 0);
-        if (Math.abs(tot-amt) > 0.01) return stat('err','Split KES '+tot.toLocaleString()+' ≠ total KES '+amt.toLocaleString()+'.');
+        if(!credits.length) return stat('err','Add at least one member to the split.');
+        const tot=credits.reduce((s,c)=>s+c.amount,0);
+        if(Math.abs(tot-amt)>0.01) return stat('err',`Split total KES ${tot.toLocaleString()} ≠ KES ${amt.toLocaleString()}.`);
     }
 
-    // Store payload — modal will add PIN and fire actual submission
-    pendingPayload = {
-        timestamp:   new Date().toISOString(),
-        date:        date,
-        week:        weekNum(new Date(date)),
-        from:        from,
-        method:      payMethod,
-        totalAmount: amt,
-        refCode:     code,
-        notes:       notes,
-        credits:     credits,
-        isSplit:     creditMode === 'split',
-        clientToken: CLIENT_TOKEN,
-        deviceInfo:  DEVICE_INFO
+    // Build payload — PIN will be added by the confirm modal
+    const payload={
+        timestamp:new Date().toISOString(), date, week:weekNum(new Date(date)),
+        from, method, totalAmount:amt, refCode:code, notes, credits,
+        isSplit:creditMode==='split',
+        clientToken:CLIENT_TOKEN, deviceInfo:DEVICE_INFO
     };
 
-    // Show the confirm modal
-    openConfirmModal();
+    // Open confirm-PIN modal — actual submission fires from fireSubmit()
+    openConfirm(payload);
 }
 
-// ── CONFIRM PIN MODAL ─────────────────────────────────────────
-function openConfirmModal() {
+function done(p) {
+    usedCodes.add(p.refCode);
+    const cd=p.isSplit?p.credits.map(c=>`${c.alias} KES ${c.amount.toLocaleString()}`).join(' · '):p.credits[0].alias;
+    stat('ok',`✅ Logged!\n${p.refCode} · KES ${p.totalAmount.toLocaleString()}\nFrom: ${p.from} → ${cd}`);
+    log.unshift(p); renderLog();
+    // Reset
+    ['fromMember','totalAmt','refCode','notes'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('msgBox').value='';
+    document.getElementById('msgBox').classList.remove('dup');
+    document.getElementById('excard').classList.remove('show');
+    document.getElementById('dupBan').classList.remove('show');
+    document.getElementById('creditMem').value='';
+    document.querySelectorAll('.s-amt').forEach(i=>i.value='');
+    document.querySelectorAll('.s-sel').forEach(s=>s.selectedIndex=0);
+    updBal(); setToday();
+    document.getElementById('subBtn').disabled=false;
+    document.getElementById('subLbl').textContent='Log Deposit';
+    window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function renderLog() {
+    const list=document.getElementById('logList'), none=document.getElementById('noEnt');
+    document.getElementById('logCnt').textContent=log.length+' this session';
+    if(!log.length){none.style.display='block';list.innerHTML='';return;}
+    none.style.display='none';
+    list.innerHTML=log.slice(0,10).map(e=>{
+        const badge=e.isSplit?`<span class="badge bs">SPLIT</span>`:`<span class="badge bm">${e.method}</span>`;
+        const cr=e.credits.map(c=>`<span style="color:var(--t2)">${c.alias}</span> <span class="mono" style="color:var(--accent);font-size:.78rem">+${c.amount.toLocaleString()}</span>`).join(' · ');
+        return `<div class="loge"><div class="logt"><div class="loga">${e.from}${badge}</div><div class="logamt">KES ${e.totalAmount.toLocaleString()}</div></div><div class="logm">${e.date} · ${e.refCode}<br>→ ${cr}</div></div>`;
+    }).join('');
+}
+
+
+/* ── CONFIRM PIN MODAL ───────────────────────────────────────── */
+let confirmPin   = '';
+let pendingPayload = null;
+
+function openConfirm(payload) {
+    pendingPayload = payload;
     confirmPin = '';
-    updateMDots();
+    updateModalDots();
     document.getElementById('confirmErr').textContent = '';
-    var p = pendingPayload;
-    var creds = p.isSplit
-        ? p.credits.map(function(c){ return c.alias+' KES '+c.amount.toLocaleString(); }).join(', ')
-        : p.credits[0].alias + ' · KES ' + p.totalAmount.toLocaleString();
+    // Show summary in subtitle
+    const creds = payload.isSplit
+        ? payload.credits.map(c => c.alias + ' KES ' + c.amount.toLocaleString()).join(', ')
+        : payload.credits[0].alias + ' · KES ' + payload.totalAmount.toLocaleString();
     document.getElementById('confirmSub').textContent = creds;
-    document.getElementById('confirmOverlay').style.opacity       = '1';
-    document.getElementById('confirmOverlay').style.pointerEvents = 'all';
+    document.getElementById('confirmOverlay').classList.add('show');
 }
 
-function closeConfirmModal() {
-    document.getElementById('confirmOverlay').style.opacity       = '0';
-    document.getElementById('confirmOverlay').style.pointerEvents = 'none';
-    document.getElementById('confirmErr').textContent = '';
-    confirmPin = '';
-    updateMDots();
+function closeConfirm() {
+    document.getElementById('confirmOverlay').classList.remove('show');
+    pendingPayload = null; confirmPin = '';
+    updateModalDots();
+    // Reset submit button
+    document.getElementById('subBtn').disabled = false;
+    document.getElementById('subLbl').textContent = 'Log Deposit';
+    const s = document.getElementById('statBox');
+    s.className = 'stat'; s.textContent = '';
 }
 
 function mnk(d) {
     if (confirmPin.length >= 4) return;
     confirmPin += d;
-    updateMDots();
-    if (confirmPin.length === 4) setTimeout(checkConfirmPin, 130);
+    updateModalDots();
+    if (confirmPin.length === 4) setTimeout(function(){ fireSubmit().catch(function(e){ console.error(e); }); }, 130);
 }
-function mnkDel() { confirmPin = confirmPin.slice(0,-1); updateMDots(); }
-function updateMDots() {
-    for (var i=0;i<4;i++)
-        document.getElementById('md'+i).classList.toggle('on', i < confirmPin.length);
+function mnkDel() { confirmPin = confirmPin.slice(0,-1); updateModalDots(); }
+function updateModalDots() {
+    for (let i=0;i<4;i++) document.getElementById('md'+i).classList.toggle('on', i<confirmPin.length);
 }
 
-function checkConfirmPin() {
+async function fireSubmit() {
     if (confirmPin !== ADMIN_PIN) {
         document.getElementById('confirmErr').textContent = '❌ Wrong PIN — try again';
-        confirmPin = ''; updateMDots(); return;
+        confirmPin = ''; updateModalDots();
+        return;
     }
-    // PIN correct — close modal and fire submission
-    closeConfirmModal();
+    // PIN correct — close modal and send
+    document.getElementById('confirmOverlay').classList.remove('show');
     pendingPayload.pin = confirmPin;
-    // Restore confirmPin before it was cleared by closeConfirmModal
-    pendingPayload.pin = ADMIN_PIN;
-    firePost(pendingPayload);
+    await sendPayload(pendingPayload);
 }
 
-// ── FIRE POST via XMLHttpRequest (no async, no CORS issues) ───
-function firePost(payload) {
-    document.getElementById('subBtn').disabled = true;
-    document.getElementById('subLbl').textContent = 'Logging…';
+async function sendPayload(payload) {
+    const btn = document.getElementById('subBtn');
+    const lbl = document.getElementById('subLbl');
+    btn.disabled = true;
+    lbl.innerHTML = '<div class="spin"></div> Logging…';
     stat('wait', 'Sending to Google Sheets…');
 
-    var xhr = new XMLHttpRequest();
-    xhr.open('POST', APPS_SCRIPT_URL, true);
-    xhr.setRequestHeader('Content-Type', 'application/json');
-
-    xhr.onreadystatechange = function() {
-        if (xhr.readyState !== 4) return;
-        document.getElementById('subBtn').disabled = false;
-        document.getElementById('subLbl').textContent = 'Log Deposit';
-
-        if (xhr.status === 0 || xhr.status >= 400) {
-            // Network error or redirect — Apps Script redirects are normal, treat as success
-            onPostSuccess(payload);
-            return;
+    try {
+        if (APPS_SCRIPT_URL !== 'YOUR_APPS_SCRIPT_WEB_APP_URL_HERE') {
+            try {
+                const resp = await fetch(APPS_SCRIPT_URL, {
+                    method:'POST',
+                    headers:{'Content-Type':'application/json'},
+                    body:JSON.stringify(payload)
+                });
+                const result = await resp.json();
+                if (result.status === 'wrong_pin') {
+                    stat('err', '❌ Wrong PIN — ' + result.remaining + ' attempt' + (result.remaining===1?'':'s') + ' remaining.');
+                    btn.disabled=false; lbl.textContent='Log Deposit'; return;
+                }
+                if (result.status === 'locked') {
+                    stat('err', '🔒 ' + result.message);
+                    btn.disabled=false; lbl.textContent='Log Deposit'; return;
+                }
+                if (result.status === 'error') {
+                    stat('err', '❌ Server error: ' + result.message);
+                    btn.disabled=false; lbl.textContent='Log Deposit'; return;
+                }
+            } catch(corsErr) {
+                await fetch(APPS_SCRIPT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+            }
+        } else {
+            await new Promise(r=>setTimeout(r,1200));
         }
-        try {
-            var result = JSON.parse(xhr.responseText);
-            if (result.status === 'wrong_pin') {
-                stat('err', '❌ Wrong PIN on server — ' + (result.remaining||0) + ' attempts remaining.');
-                return;
-            }
-            if (result.status === 'locked') {
-                stat('err', '🔒 ' + result.message);
-                return;
-            }
-            if (result.status === 'error') {
-                stat('err', '❌ Server error: ' + result.message);
-                return;
-            }
-            onPostSuccess(payload);
-        } catch(e) {
-            // Response not parseable JSON (e.g. redirect) — still treat as success
-            onPostSuccess(payload);
-        }
-    };
-
-    xhr.onerror = function() {
-        // XHR error often means CORS redirect from Apps Script — treat as success
-        onPostSuccess(payload);
-    };
-
-    xhr.send(JSON.stringify(payload));
+        done(payload);
+    } catch(e) {
+        stat('err','❌ Failed — check connection.\n'+e.message);
+        btn.disabled=false; lbl.textContent='Log Deposit';
+    }
 }
 
-function onPostSuccess(p) {
-    usedCodes[p.refCode] = true;
-    var cd = p.isSplit
-        ? p.credits.map(function(c){ return c.alias+' KES '+c.amount.toLocaleString(); }).join(' · ')
-        : p.credits[0].alias;
-    stat('ok', '✅ Logged!\n'+p.refCode+' · KES '+p.totalAmount.toLocaleString()+'\nFrom: '+p.from+' → '+cd);
-    sessionLog.unshift(p); renderLog();
-    // Reset form
-    ['fromMember','totalAmt','refCode','notes'].forEach(function(id){ document.getElementById(id).value=''; });
-    document.getElementById('msgBox').value = '';
-    document.getElementById('msgBox').classList.remove('dup');
-    document.getElementById('excard').classList.remove('show');
-    document.getElementById('dupBan').classList.remove('show');
-    document.getElementById('creditMem').value = '';
-    document.querySelectorAll('.s-amt').forEach(function(i){ i.value=''; });
-    document.querySelectorAll('.s-sel').forEach(function(s){ s.selectedIndex=0; });
-    updBal(); setToday();
-    window.scrollTo({top:0,behavior:'smooth'});
-}
-
-// ── RECENT LOG ────────────────────────────────────────────────
-function renderLog() {
-    var list = document.getElementById('logList');
-    var none = document.getElementById('noEnt');
-    document.getElementById('logCnt').textContent = sessionLog.length + ' this session';
-    if (!sessionLog.length) { none.style.display='block'; list.innerHTML=''; return; }
-    none.style.display = 'none';
-    list.innerHTML = sessionLog.slice(0,10).map(function(e) {
-        var badge = e.isSplit
-            ? '<span class="badge bs">SPLIT</span>'
-            : '<span class="badge bm">'+e.method+'</span>';
-        var cr = e.credits.map(function(c){
-            return '<span style="color:var(--t2)">'+c.alias+'</span> '+
-                   '<span class="mono" style="color:var(--accent);font-size:.78rem">+'+c.amount.toLocaleString()+'</span>';
-        }).join(' · ');
-        return '<div class="loge"><div class="logt"><div class="loga">'+e.from+badge+'</div>'+
-               '<div class="logamt">KES '+e.totalAmount.toLocaleString()+'</div></div>'+
-               '<div class="logm">'+e.date+' · '+e.refCode+'<br>→ '+cr+'</div></div>';
-    }).join('');
-}
-
-// ── HELPERS ───────────────────────────────────────────────────
-function stat(type,msg) {
-    var el = document.getElementById('statBox');
-    el.className = 'stat ' + type;
-    el.textContent = msg;
-}
-function weekNum(d) {
-    var u  = new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));
-    var dw = u.getUTCDay() || 7;
-    u.setUTCDate(u.getUTCDate()+4-dw);
-    var y = new Date(Date.UTC(u.getUTCFullYear(),0,1));
-    return 'W'+Math.ceil((((u-y)/86400000)+1)/7);
-}
+function stat(type,msg){const el=document.getElementById('statBox');el.className='stat '+type;el.textContent=msg;}
+function weekNum(d){const u=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));const dw=u.getUTCDay()||7;u.setUTCDate(u.getUTCDate()+4-dw);const y=new Date(Date.UTC(u.getUTCFullYear(),0,1));return 'W'+Math.ceil((((u-y)/86400000)+1)/7);}
 </script>
 
 <!-- CONFIRM PIN MODAL -->
-<div class="modal-overlay" id="confirmOverlay" style="opacity:0;pointer-events:none;">
+<div class="modal-overlay" id="confirmOverlay">
     <div class="modal">
         <div class="modal-icon">🔒</div>
         <div class="modal-title">Confirm Deposit</div>
@@ -877,7 +853,7 @@ function weekNum(d) {
             <button class="mnk mdel" onclick="mnkDel()">⌫</button>
         </div>
         <div class="modal-err" id="confirmErr"></div>
-        <button class="modal-cancel" onclick="closeConfirmModal()">✕ Cancel</button>
+        <button class="modal-cancel" onclick="closeConfirm()">✕ Cancel</button>
     </div>
 </div>
 </body>
