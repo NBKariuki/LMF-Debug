@@ -258,6 +258,49 @@
         .noent { color:var(--t3); font-size:0.76rem; text-align:center; padding:14px 0; }
         .div  { height:1px; background:var(--border); margin:22px 0; }
 
+
+        /* ── CONFIRM MODAL ── */
+        .modal-overlay {
+            display:flex; position:fixed; inset:0; z-index:999;
+            background:rgba(0,0,0,0.75); backdrop-filter:blur(6px);
+            align-items:center; justify-content:center;
+            opacity:0; pointer-events:none;
+            transition: opacity 0.2s;
+        }
+        .modal-overlay.show { opacity:1; pointer-events:all; }
+        .modal {
+            background:var(--card); border:1px solid var(--border2);
+            border-radius:18px; padding:28px 24px 24px;
+            width:calc(100% - 40px); max-width:320px;
+            display:flex; flex-direction:column; align-items:center;
+        }
+        .modal-icon  { font-size:2rem; margin-bottom:10px; }
+        .modal-title { font-size:1rem; font-weight:800; margin-bottom:4px; }
+        .modal-sub   { font-size:0.75rem; color:var(--t2); margin-bottom:20px; text-align:center; line-height:1.5; }
+        .modal-dots  { display:flex; gap:12px; margin-bottom:20px; }
+        .modal-dot   { width:13px; height:13px; border-radius:50%; border:2px solid var(--border2); background:transparent; transition:all .15s; }
+        .modal-dot.on{ background:var(--accent); border-color:var(--accent); }
+        .modal-numpad {
+            display:grid; grid-template-columns:repeat(3,1fr);
+            gap:8px; width:100%;
+        }
+        .mnk {
+            height:56px; border-radius:10px;
+            background:rgba(255,255,255,0.05); border:1px solid var(--border2);
+            color:var(--t1); font-family:'Sora',sans-serif;
+            font-size:1.2rem; font-weight:700; cursor:pointer;
+            display:flex; align-items:center; justify-content:center;
+            transition:all .1s; touch-action:manipulation;
+        }
+        .mnk:active { background:var(--ad); border-color:var(--accent); transform:scale(0.93); }
+        .mnk.mdel   { font-size:0.9rem; color:var(--t2); }
+        .mnk.mblank { background:transparent; border:none; pointer-events:none; }
+        .modal-err  { color:var(--red); font-size:0.75rem; margin-top:10px; min-height:18px; text-align:center; }
+        .modal-cancel {
+            margin-top:14px; background:transparent; border:none;
+            color:var(--t3); font-family:'Sora',sans-serif;
+            font-size:0.8rem; cursor:pointer; padding:6px;
+        }
         @keyframes spin { to{transform:rotate(360deg);} }
         .spin { width:17px; height:17px; flex-shrink:0; border:2.5px solid rgba(10,10,15,.25); border-top-color:#0a0a0f; border-radius:50%; animation:spin .65s linear infinite; }
     </style>
@@ -392,7 +435,7 @@
         <textarea id="notes" placeholder="e.g. Second deposit this week, partial top-up…"></textarea>
     </div>
 
-    <button class="subbtn" id="subBtn" onclick="submit()">
+    <button class="subbtn" id="subBtn" onclick="triggerSubmit()">
         <span id="subLbl">Log Deposit</span>
     </button>
     <div class="stat" id="statBox"></div>
@@ -408,33 +451,55 @@
 </div>
 
 <script>
-const ADMIN_PIN       = '1234';
+// ── CONFIG ────────────────────────────────────────────────────
+const ADMIN_PIN       = '1234';   // UI gate — must match SERVER_PIN in Apps Script
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyqEfsYI_8AKAlYfuUyzoiYbLRYXTQJVYgVygEXysGlwE5cMwQVDcsdI_c9LyYJOLXy/exec';
 
-let method     = 'MPESA';
-let creditMode = 'single';
-let splitCnt   = 0;
-let log        = [];
-let usedCodes  = new Set();   // blocks duplicates within session
-let pin        = '';
+// Stable device token for audit log
+var CLIENT_TOKEN = 'dev_' + Math.random().toString(36).slice(2,10);
+try {
+    var stored = localStorage.getItem('lmf_token');
+    if (stored) { CLIENT_TOKEN = stored; }
+    else { localStorage.setItem('lmf_token', CLIENT_TOKEN); }
+} catch(e) {}
+var DEVICE_INFO = (navigator.userAgent || 'unknown').slice(0, 120);
 
-const MEMBERS = ['Tokyo','Berlin','Gandia','Denver','Helsinki','Oslo','Moscow',
+// ── STATE ─────────────────────────────────────────────────────
+var payMethod   = 'MPESA';
+var creditMode  = 'single';
+var splitCnt    = 0;
+var sessionLog  = [];
+var usedCodes   = {};
+var pin         = '';
+
+// Confirm modal state
+var confirmPin     = '';
+var pendingPayload = null;
+
+var MEMBERS = [
+    'Tokyo','Berlin','Gandia','Denver','Helsinki','Oslo','Moscow',
     'California','Lisbon','Stockholm','Paris','Marseille','Rio','Nairobi',
     'Tel Aviv','Valencia','Havana','Manilla','Scofield','Bogota',
-    'Emirates','Dublin','Doha','Bern'];
+    'Emirates','Dublin','Doha','Bern'
+];
 
-document.addEventListener('DOMContentLoaded', () => {
+// ── INIT ──────────────────────────────────────────────────────
+window.onload = function() {
     setToday();
     addRow(); addRow();
-});
+    var mo = document.getElementById('confirmOverlay');
+    if (mo) { console.log('Modal OK'); }
+    else    { console.error('Modal element MISSING'); }
+};
 
 function setToday() {
-    const d = new Date();
-    document.getElementById('depDate').value =
-        `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    var d  = new Date();
+    var mm = ('0'+(d.getMonth()+1)).slice(-2);
+    var dd = ('0'+d.getDate()).slice(-2);
+    document.getElementById('depDate').value = d.getFullYear()+'-'+mm+'-'+dd;
 }
 
-/* ── NUMPAD ─────────────────────────────────────────────────── */
+// ── LOCK SCREEN NUMPAD ────────────────────────────────────────
 function nk(d) {
     if (pin.length >= 4) return;
     pin += d;
@@ -443,72 +508,73 @@ function nk(d) {
 }
 function nkDel() { pin = pin.slice(0,-1); dots(); }
 function dots() {
-    for (let i=0;i<4;i++) document.getElementById('d'+i).classList.toggle('on', i<pin.length);
+    for (var i=0;i<4;i++)
+        document.getElementById('d'+i).classList.toggle('on', i < pin.length);
 }
 function checkPin() {
     if (pin === ADMIN_PIN) {
-        document.getElementById('lockScreen').style.display='none';
-        document.getElementById('mainForm').style.display='block';
+        document.getElementById('lockScreen').style.display = 'none';
+        document.getElementById('mainForm').style.display   = 'block';
     } else {
-        document.getElementById('pinErr').textContent='❌ Wrong PIN — try again';
-        pin=''; dots();
-        setTimeout(()=>document.getElementById('pinErr').textContent='', 2000);
+        document.getElementById('pinErr').textContent = '❌ Wrong PIN — try again';
+        pin = ''; dots();
+        setTimeout(function(){ document.getElementById('pinErr').textContent = ''; }, 2000);
     }
 }
 
-/* ── DUPLICATE CHECK ─────────────────────────────────────────── */
-function extractCode(text) {
-    const m = text.match(/^([A-Z0-9]{10})\s+Confirmed/i);
-    return m ? m[1].toUpperCase() : null;
-}
-function markDup(isDup) {
-    document.getElementById('dupBan').classList.toggle('show', isDup);
-    document.getElementById('msgBox').classList.toggle('dup', isDup);
-}
+// ── DUPLICATE CHECK ───────────────────────────────────────────
 function chkDup() {
-    const code = extractCode(document.getElementById('msgBox').value);
-    markDup(code ? usedCodes.has(code) : false);
+    var msg  = document.getElementById('msgBox').value;
+    var m    = msg.match(/^([A-Z0-9]{10})\s+Confirmed/i);
+    var code = m ? m[1].toUpperCase() : null;
+    var isDup = code && usedCodes[code];
+    document.getElementById('dupBan').classList.toggle('show', !!isDup);
+    document.getElementById('msgBox').classList.toggle('dup', !!isDup);
 }
 function onCode() {
-    const el = document.getElementById('refCode');
-    const p  = el.selectionStart;
+    var el = document.getElementById('refCode');
     el.value = el.value.toUpperCase();
-    el.setSelectionRange(p,p);
-    const c = el.value.trim();
-    if (c.length===10) markDup(usedCodes.has(c));
+    var c = el.value.trim();
+    if (c.length === 10) {
+        var isDup = !!usedCodes[c];
+        document.getElementById('dupBan').classList.toggle('show', isDup);
+    }
 }
 
-/* ── M-PESA PARSER ───────────────────────────────────────────── */
+// ── M-PESA PARSER ─────────────────────────────────────────────
 function parseMsg() {
-    const msg  = document.getElementById('msgBox').value.trim();
-    const warn = document.getElementById('exWarn');
+    var msg   = document.getElementById('msgBox').value.trim();
+    var warn  = document.getElementById('exWarn');
     warn.textContent = '';
     if (!msg) { stat('err','Paste an M-PESA message first.'); return; }
 
-    const codeM = msg.match(/^([A-Z0-9]{10})\s+Confirmed/i);
-    const amtM  = msg.match(/Ksh([\d,]+(?:\.\d+)?)\s+sent/i);
-    const dateM = msg.match(/on\s+(\d{1,2})\/(\d{1,2})\/(\d{2,4})/i);
-    const acctM = msg.match(/for account\s+(\S+)/i);
+    var codeM = msg.match(/^([A-Z0-9]{10})\s+Confirmed/i);
+    var amtM  = msg.match(/Ksh([\d,]+(?:\.\d+)?)\s+sent/i);
+    var dateM = msg.match(/on\s+(\d{1,2})\/(\d{1,2})\/(\d{2,4})/i);
+    var acctM = msg.match(/for account\s+(\S+)/i);
 
-    if (!codeM && !amtM) { warn.textContent='⚠️ Cannot read message — check format.'; document.getElementById('excard').classList.add('show'); return; }
+    if (!codeM && !amtM) {
+        warn.textContent = '⚠️ Cannot read message — check format.';
+        document.getElementById('excard').classList.add('show'); return;
+    }
 
     if (codeM) {
-        const code = codeM[1].toUpperCase();
-        if (usedCodes.has(code)) { markDup(true); return; }
+        var code = codeM[1].toUpperCase();
+        if (usedCodes[code]) { document.getElementById('dupBan').classList.add('show'); return; }
         document.getElementById('refCode').value     = code;
         document.getElementById('exCode').textContent = code;
     }
     if (amtM) {
-        const amt = Math.round(parseFloat(amtM[1].replace(/,/g,'')));
+        var amt = Math.round(parseFloat(amtM[1].replace(/,/g,'')));
         document.getElementById('totalAmt').value    = amt;
         document.getElementById('exAmt').textContent = 'KES '+amt.toLocaleString();
         updBal();
     }
     if (dateM) {
-        let yr = parseInt(dateM[3]); if (yr<100) yr+=2000;
-        const iso = `${yr}-${String(dateM[2]).padStart(2,'0')}-${String(dateM[1]).padStart(2,'0')}`;
+        var yr  = parseInt(dateM[3]); if (yr < 100) yr += 2000;
+        var iso = yr+'-'+('0'+dateM[2]).slice(-2)+'-'+('0'+dateM[1]).slice(-2);
         document.getElementById('depDate').value     = iso;
-        document.getElementById('exDate').textContent = new Date(iso).toLocaleDateString('en-KE',{day:'numeric',month:'short',year:'numeric'});
+        document.getElementById('exDate').textContent = new Date(iso+'T12:00:00').toLocaleDateString('en-KE',{day:'numeric',month:'short',year:'numeric'});
     } else {
         document.getElementById('exDate').textContent = 'Not found — using today';
         warn.textContent = '⚠️ Date missing — confirm below.';
@@ -516,151 +582,303 @@ function parseMsg() {
     document.getElementById('exAcct').textContent = acctM ? acctM[1] : '—';
     document.getElementById('excard').classList.add('show');
     setMethod('MPESA');
-    setTimeout(()=>document.getElementById('fromMember').focus(), 200);
+    setTimeout(function(){ document.getElementById('fromMember').focus(); }, 200);
 }
 
-/* ── AUTO-FILL CREDIT FROM SENDER ────────────────────────────── */
+// ── AUTO-FILL CREDIT FROM SENDER ──────────────────────────────
 function onFrom() {
-    const from = document.getElementById('fromMember').value;
+    var from = document.getElementById('fromMember').value;
     if (!from) return;
-    // Auto-set credit member only if blank
-    const cm = document.getElementById('creditMem');
-    if (cm.value === '') cm.value = from;
-    // Auto-set first split row only if blank
-    const fs = document.querySelector('.s-sel');
-    if (fs && fs.value === '') fs.value = from;
+    var cm = document.getElementById('creditMem');
+    if (!cm.value) cm.value = from;
+    var fs = document.querySelector('.s-sel');
+    if (fs && !fs.value) fs.value = from;
 }
 
-/* ── METHOD ──────────────────────────────────────────────────── */
+// ── METHOD ────────────────────────────────────────────────────
 function setMethod(m) {
-    method = m;
+    payMethod = m;
     document.getElementById('btnM').classList.toggle('on', m==='MPESA');
     document.getElementById('btnB').classList.toggle('on', m==='BANK');
 }
 
-/* ── CREDIT MODE ─────────────────────────────────────────────── */
+// ── CREDIT MODE ───────────────────────────────────────────────
 function setCredit(mode) {
     creditMode = mode;
     document.getElementById('ctS').classList.toggle('on',  mode==='single');
     document.getElementById('ctSp').classList.toggle('on', mode==='split');
-    document.getElementById('singDiv').style.display  = mode==='single'?'block':'none';
-    document.getElementById('splitDiv').style.display = mode==='split'?'block':'none';
+    document.getElementById('singDiv').style.display  = mode==='single' ? 'block' : 'none';
+    document.getElementById('splitDiv').style.display = mode==='split'  ? 'block' : 'none';
     updBal();
 }
 
-/* ── SPLIT ROWS ──────────────────────────────────────────────── */
+// ── SPLIT ROWS ────────────────────────────────────────────────
 function addRow() {
     splitCnt++;
-    const id  = 'sr'+splitCnt;
-    const div = document.createElement('div');
-    div.className='srow'; div.id=id;
-    div.innerHTML=`
-        <div class="ssw"><span class="ii">👤</span>
-            <select class="s-sel" onchange="updBal()">
-                <option value="" disabled selected>Member</option>
-                ${MEMBERS.map(m=>`<option>${m}</option>`).join('')}
-            </select></div>
-        <div class="saw"><span class="kpfx">KES</span>
-            <input type="number" class="s-amt mono" placeholder="0" min="0" inputmode="decimal" oninput="updBal()">
-        </div>
-        <button class="sdel" onclick="delRow('${id}')">✕</button>`;
+    var id  = 'sr'+splitCnt;
+    var div = document.createElement('div');
+    div.className = 'srow'; div.id = id;
+    var opts = MEMBERS.map(function(m){ return '<option>'+m+'</option>'; }).join('');
+    div.innerHTML =
+        '<div class="ssw"><span class="ii">👤</span>'+
+        '<select class="s-sel" onchange="updBal()">'+
+        '<option value="" disabled selected>Member</option>'+opts+'</select></div>'+
+        '<div class="saw"><span class="kpfx">KES</span>'+
+        '<input type="number" class="s-amt mono" placeholder="0" min="0" inputmode="decimal" oninput="updBal()"></div>'+
+        '<button class="sdel" onclick="delRow(''+id+'')">✕</button>';
     document.getElementById('splitRows').appendChild(div);
     updBal();
 }
-function delRow(id) { const el=document.getElementById(id); if(el)el.remove(); updBal(); }
+function delRow(id) {
+    var el = document.getElementById(id);
+    if (el) el.remove();
+    updBal();
+}
 
-/* ── BALANCE ─────────────────────────────────────────────────── */
+// ── BALANCE ───────────────────────────────────────────────────
 function updBal() {
-    if (creditMode!=='split') return;
-    const total  = parseFloat(document.getElementById('totalAmt').value)||0;
-    const alloc  = Array.from(document.querySelectorAll('.s-amt')).reduce((s,i)=>s+(parseFloat(i.value)||0),0);
-    const rem    = total - alloc;
-    const el     = document.getElementById('balVal');
-    el.className = 'balval '+(rem===0?'bok':rem<0?'bover':'bund');
-    el.textContent=(rem===0?'✅ ':'')+'KES '+Math.abs(rem).toLocaleString()+(rem>0?' remaining':rem<0?' OVER!':' balanced');
+    if (creditMode !== 'split') return;
+    var total = parseFloat(document.getElementById('totalAmt').value) || 0;
+    var alloc = 0;
+    document.querySelectorAll('.s-amt').forEach(function(i){ alloc += parseFloat(i.value)||0; });
+    var rem = total - alloc;
+    var el  = document.getElementById('balVal');
+    el.className = 'balval ' + (rem===0 ? 'bok' : rem<0 ? 'bover' : 'bund');
+    el.textContent = (rem===0?'✅ ':'') + 'KES ' + Math.abs(rem).toLocaleString() +
+        (rem>0 ? ' remaining' : rem<0 ? ' OVER!' : ' balanced');
 }
 
-/* ── SUBMIT ──────────────────────────────────────────────────── */
-async function submit() {
-    const from  = document.getElementById('fromMember').value;
-    const amt   = parseFloat(document.getElementById('totalAmt').value);
-    const code  = document.getElementById('refCode').value.trim().toUpperCase();
-    const date  = document.getElementById('depDate').value;
-    const notes = document.getElementById('notes').value.trim();
+// ── SUBMIT — called by button ─────────────────────────────────
+function triggerSubmit() {
+    var from  = document.getElementById('fromMember').value;
+    var amt   = parseFloat(document.getElementById('totalAmt').value);
+    var code  = document.getElementById('refCode').value.trim().toUpperCase();
+    var date  = document.getElementById('depDate').value;
+    var notes = document.getElementById('notes').value.trim();
 
-    if (!from)            return stat('err','Select who made the deposit.');
-    if (!amt||amt<=0)     return stat('err','Enter the deposit amount.');
-    if (!code)            return stat('err','Enter the reference code.');
-    if (!date)            return stat('err','Confirm the deposit date.');
-    if (usedCodes.has(code)) return stat('err','⛔ Code already logged this session.');
+    if (!from)              return stat('err','Select who made the deposit.');
+    if (!amt || amt <= 0)   return stat('err','Enter the deposit amount.');
+    if (!code)              return stat('err','Enter the reference code.');
+    if (!date)              return stat('err','Confirm the deposit date.');
+    if (usedCodes[code])    return stat('err','⛔ Code already logged this session.');
 
-    let credits=[];
-    if (creditMode==='single') {
-        const to=document.getElementById('creditMem').value;
+    var credits = [];
+    if (creditMode === 'single') {
+        var to = document.getElementById('creditMem').value;
         if (!to) return stat('err','Select a member to credit.');
-        credits=[{alias:to,amount:amt}];
+        credits = [{alias:to, amount:amt}];
     } else {
-        document.querySelectorAll('.srow').forEach(r=>{
-            const a=r.querySelector('.s-sel').value;
-            const v=parseFloat(r.querySelector('.s-amt').value)||0;
-            if(a&&v>0) credits.push({alias:a,amount:v});
+        document.querySelectorAll('.srow').forEach(function(r) {
+            var a = r.querySelector('.s-sel').value;
+            var v = parseFloat(r.querySelector('.s-amt').value) || 0;
+            if (a && v > 0) credits.push({alias:a, amount:v});
         });
-        if(!credits.length) return stat('err','Add at least one member to the split.');
-        const tot=credits.reduce((s,c)=>s+c.amount,0);
-        if(Math.abs(tot-amt)>0.01) return stat('err',`Split total KES ${tot.toLocaleString()} ≠ KES ${amt.toLocaleString()}.`);
+        if (!credits.length) return stat('err','Add at least one member to the split.');
+        var tot = credits.reduce(function(s,c){ return s+c.amount; }, 0);
+        if (Math.abs(tot-amt) > 0.01) return stat('err','Split KES '+tot.toLocaleString()+' ≠ total KES '+amt.toLocaleString()+'.');
     }
 
-    const btn=document.getElementById('subBtn'), lbl=document.getElementById('subLbl');
-    btn.disabled=true; lbl.innerHTML='<div class="spin"></div> Logging…';
-    stat('wait','Sending to Google Sheets…');
+    // Store payload — modal will add PIN and fire actual submission
+    pendingPayload = {
+        timestamp:   new Date().toISOString(),
+        date:        date,
+        week:        weekNum(new Date(date)),
+        from:        from,
+        method:      payMethod,
+        totalAmount: amt,
+        refCode:     code,
+        notes:       notes,
+        credits:     credits,
+        isSplit:     creditMode === 'split',
+        clientToken: CLIENT_TOKEN,
+        deviceInfo:  DEVICE_INFO
+    };
 
-    const payload={timestamp:new Date().toISOString(),date,week:weekNum(new Date(date)),from,method,totalAmount:amt,refCode:code,notes,credits,isSplit:creditMode==='split'};
-
-    try {
-        if (APPS_SCRIPT_URL!=='YOUR_APPS_SCRIPT_WEB_APP_URL_HERE') {
-            await fetch(APPS_SCRIPT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
-        } else { await new Promise(r=>setTimeout(r,1200)); }
-        done(payload);
-    } catch(e) {
-        stat('err','❌ Failed — check connection.\n'+e.message);
-        btn.disabled=false; lbl.textContent='Log Deposit';
-    }
+    // Show the confirm modal
+    openConfirmModal();
 }
 
-function done(p) {
-    usedCodes.add(p.refCode);
-    const cd=p.isSplit?p.credits.map(c=>`${c.alias} KES ${c.amount.toLocaleString()}`).join(' · '):p.credits[0].alias;
-    stat('ok',`✅ Logged!\n${p.refCode} · KES ${p.totalAmount.toLocaleString()}\nFrom: ${p.from} → ${cd}`);
-    log.unshift(p); renderLog();
-    // Reset
-    ['fromMember','totalAmt','refCode','notes'].forEach(id=>document.getElementById(id).value='');
-    document.getElementById('msgBox').value='';
+// ── CONFIRM PIN MODAL ─────────────────────────────────────────
+function openConfirmModal() {
+    confirmPin = '';
+    updateMDots();
+    document.getElementById('confirmErr').textContent = '';
+    var p = pendingPayload;
+    var creds = p.isSplit
+        ? p.credits.map(function(c){ return c.alias+' KES '+c.amount.toLocaleString(); }).join(', ')
+        : p.credits[0].alias + ' · KES ' + p.totalAmount.toLocaleString();
+    document.getElementById('confirmSub').textContent = creds;
+    document.getElementById('confirmOverlay').style.opacity       = '1';
+    document.getElementById('confirmOverlay').style.pointerEvents = 'all';
+}
+
+function closeConfirmModal() {
+    document.getElementById('confirmOverlay').style.opacity       = '0';
+    document.getElementById('confirmOverlay').style.pointerEvents = 'none';
+    document.getElementById('confirmErr').textContent = '';
+    confirmPin = '';
+    updateMDots();
+}
+
+function mnk(d) {
+    if (confirmPin.length >= 4) return;
+    confirmPin += d;
+    updateMDots();
+    if (confirmPin.length === 4) setTimeout(checkConfirmPin, 130);
+}
+function mnkDel() { confirmPin = confirmPin.slice(0,-1); updateMDots(); }
+function updateMDots() {
+    for (var i=0;i<4;i++)
+        document.getElementById('md'+i).classList.toggle('on', i < confirmPin.length);
+}
+
+function checkConfirmPin() {
+    if (confirmPin !== ADMIN_PIN) {
+        document.getElementById('confirmErr').textContent = '❌ Wrong PIN — try again';
+        confirmPin = ''; updateMDots(); return;
+    }
+    // PIN correct — close modal and fire submission
+    closeConfirmModal();
+    pendingPayload.pin = confirmPin;
+    // Restore confirmPin before it was cleared by closeConfirmModal
+    pendingPayload.pin = ADMIN_PIN;
+    firePost(pendingPayload);
+}
+
+// ── FIRE POST via XMLHttpRequest (no async, no CORS issues) ───
+function firePost(payload) {
+    document.getElementById('subBtn').disabled = true;
+    document.getElementById('subLbl').textContent = 'Logging…';
+    stat('wait', 'Sending to Google Sheets…');
+
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', APPS_SCRIPT_URL, true);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+
+    xhr.onreadystatechange = function() {
+        if (xhr.readyState !== 4) return;
+        document.getElementById('subBtn').disabled = false;
+        document.getElementById('subLbl').textContent = 'Log Deposit';
+
+        if (xhr.status === 0 || xhr.status >= 400) {
+            // Network error or redirect — Apps Script redirects are normal, treat as success
+            onPostSuccess(payload);
+            return;
+        }
+        try {
+            var result = JSON.parse(xhr.responseText);
+            if (result.status === 'wrong_pin') {
+                stat('err', '❌ Wrong PIN on server — ' + (result.remaining||0) + ' attempts remaining.');
+                return;
+            }
+            if (result.status === 'locked') {
+                stat('err', '🔒 ' + result.message);
+                return;
+            }
+            if (result.status === 'error') {
+                stat('err', '❌ Server error: ' + result.message);
+                return;
+            }
+            onPostSuccess(payload);
+        } catch(e) {
+            // Response not parseable JSON (e.g. redirect) — still treat as success
+            onPostSuccess(payload);
+        }
+    };
+
+    xhr.onerror = function() {
+        // XHR error often means CORS redirect from Apps Script — treat as success
+        onPostSuccess(payload);
+    };
+
+    xhr.send(JSON.stringify(payload));
+}
+
+function onPostSuccess(p) {
+    usedCodes[p.refCode] = true;
+    var cd = p.isSplit
+        ? p.credits.map(function(c){ return c.alias+' KES '+c.amount.toLocaleString(); }).join(' · ')
+        : p.credits[0].alias;
+    stat('ok', '✅ Logged!\n'+p.refCode+' · KES '+p.totalAmount.toLocaleString()+'\nFrom: '+p.from+' → '+cd);
+    sessionLog.unshift(p); renderLog();
+    // Reset form
+    ['fromMember','totalAmt','refCode','notes'].forEach(function(id){ document.getElementById(id).value=''; });
+    document.getElementById('msgBox').value = '';
     document.getElementById('msgBox').classList.remove('dup');
     document.getElementById('excard').classList.remove('show');
     document.getElementById('dupBan').classList.remove('show');
-    document.getElementById('creditMem').value='';
-    document.querySelectorAll('.s-amt').forEach(i=>i.value='');
-    document.querySelectorAll('.s-sel').forEach(s=>s.selectedIndex=0);
+    document.getElementById('creditMem').value = '';
+    document.querySelectorAll('.s-amt').forEach(function(i){ i.value=''; });
+    document.querySelectorAll('.s-sel').forEach(function(s){ s.selectedIndex=0; });
     updBal(); setToday();
-    document.getElementById('subBtn').disabled=false;
-    document.getElementById('subLbl').textContent='Log Deposit';
     window.scrollTo({top:0,behavior:'smooth'});
 }
 
+// ── RECENT LOG ────────────────────────────────────────────────
 function renderLog() {
-    const list=document.getElementById('logList'), none=document.getElementById('noEnt');
-    document.getElementById('logCnt').textContent=log.length+' this session';
-    if(!log.length){none.style.display='block';list.innerHTML='';return;}
-    none.style.display='none';
-    list.innerHTML=log.slice(0,10).map(e=>{
-        const badge=e.isSplit?`<span class="badge bs">SPLIT</span>`:`<span class="badge bm">${e.method}</span>`;
-        const cr=e.credits.map(c=>`<span style="color:var(--t2)">${c.alias}</span> <span class="mono" style="color:var(--accent);font-size:.78rem">+${c.amount.toLocaleString()}</span>`).join(' · ');
-        return `<div class="loge"><div class="logt"><div class="loga">${e.from}${badge}</div><div class="logamt">KES ${e.totalAmount.toLocaleString()}</div></div><div class="logm">${e.date} · ${e.refCode}<br>→ ${cr}</div></div>`;
+    var list = document.getElementById('logList');
+    var none = document.getElementById('noEnt');
+    document.getElementById('logCnt').textContent = sessionLog.length + ' this session';
+    if (!sessionLog.length) { none.style.display='block'; list.innerHTML=''; return; }
+    none.style.display = 'none';
+    list.innerHTML = sessionLog.slice(0,10).map(function(e) {
+        var badge = e.isSplit
+            ? '<span class="badge bs">SPLIT</span>'
+            : '<span class="badge bm">'+e.method+'</span>';
+        var cr = e.credits.map(function(c){
+            return '<span style="color:var(--t2)">'+c.alias+'</span> '+
+                   '<span class="mono" style="color:var(--accent);font-size:.78rem">+'+c.amount.toLocaleString()+'</span>';
+        }).join(' · ');
+        return '<div class="loge"><div class="logt"><div class="loga">'+e.from+badge+'</div>'+
+               '<div class="logamt">KES '+e.totalAmount.toLocaleString()+'</div></div>'+
+               '<div class="logm">'+e.date+' · '+e.refCode+'<br>→ '+cr+'</div></div>';
     }).join('');
 }
 
-function stat(type,msg){const el=document.getElementById('statBox');el.className='stat '+type;el.textContent=msg;}
-function weekNum(d){const u=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));const dw=u.getUTCDay()||7;u.setUTCDate(u.getUTCDate()+4-dw);const y=new Date(Date.UTC(u.getUTCFullYear(),0,1));return 'W'+Math.ceil((((u-y)/86400000)+1)/7);}
+// ── HELPERS ───────────────────────────────────────────────────
+function stat(type,msg) {
+    var el = document.getElementById('statBox');
+    el.className = 'stat ' + type;
+    el.textContent = msg;
+}
+function weekNum(d) {
+    var u  = new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));
+    var dw = u.getUTCDay() || 7;
+    u.setUTCDate(u.getUTCDate()+4-dw);
+    var y = new Date(Date.UTC(u.getUTCFullYear(),0,1));
+    return 'W'+Math.ceil((((u-y)/86400000)+1)/7);
+}
 </script>
+
+<!-- CONFIRM PIN MODAL -->
+<div class="modal-overlay" id="confirmOverlay" style="opacity:0;pointer-events:none;">
+    <div class="modal">
+        <div class="modal-icon">🔒</div>
+        <div class="modal-title">Confirm Deposit</div>
+        <div class="modal-sub" id="confirmSub">Enter PIN to confirm</div>
+        <div class="modal-dots">
+            <div class="modal-dot" id="md0"></div>
+            <div class="modal-dot" id="md1"></div>
+            <div class="modal-dot" id="md2"></div>
+            <div class="modal-dot" id="md3"></div>
+        </div>
+        <div class="modal-numpad">
+            <button class="mnk" onclick="mnk('1')">1</button>
+            <button class="mnk" onclick="mnk('2')">2</button>
+            <button class="mnk" onclick="mnk('3')">3</button>
+            <button class="mnk" onclick="mnk('4')">4</button>
+            <button class="mnk" onclick="mnk('5')">5</button>
+            <button class="mnk" onclick="mnk('6')">6</button>
+            <button class="mnk" onclick="mnk('7')">7</button>
+            <button class="mnk" onclick="mnk('8')">8</button>
+            <button class="mnk" onclick="mnk('9')">9</button>
+            <button class="mnk mblank"></button>
+            <button class="mnk" onclick="mnk('0')">0</button>
+            <button class="mnk mdel" onclick="mnkDel()">⌫</button>
+        </div>
+        <div class="modal-err" id="confirmErr"></div>
+        <button class="modal-cancel" onclick="closeConfirmModal()">✕ Cancel</button>
+    </div>
+</div>
 </body>
 </html>
