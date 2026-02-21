@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#0a0a0f">
+    <title>LMF · Log Deposit</title>
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg:      #0a0a0f;
+            --card:    #13131c;
+            --card2:   #1a1a26;
+            --border:  rgba(255,255,255,0.07);
+            --border2: rgba(255,255,255,0.12);
+            --accent:  #00e5a0;
+            --ad:      rgba(0,229,160,0.1);
+            --blue:    #60a5fa;
+            --bd:      rgba(96,165,250,0.1);
+            --gold:    #fbbf24;
+            --red:     #f87171;
+            --rd:      rgba(248,113,113,0.1);
+            --t1:      #f0f0f8;
+            --t2:      rgba(240,240,248,0.5);
+            --t3:      rgba(240,240,248,0.25);
+            --r:       12px;
+        }
+        * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+        body {
+            font-family: 'Sora', sans-serif;
+            background: var(--bg);
+            color: var(--t1);
+            min-height: 100svh;
+            padding-bottom: 48px;
+            background-image: radial-gradient(ellipse 80% 35% at 50% 0%, rgba(0,229,160,0.05) 0%, transparent 60%);
+        }
+
+        /* ── HEADER ── */
+        .header {
+            padding: 20px 18px 16px;
+            display: flex; align-items: center; gap: 12px;
+            border-bottom: 1px solid var(--border);
+        }
+        .hicon {
+            width: 38px; height: 38px; border-radius: 11px; flex-shrink:0;
+            background: linear-gradient(135deg,#00e5a0,#60a5fa);
+            display:flex; align-items:center; justify-content:center; font-size:1.1rem;
+        }
+        .htitle { font-size: 1rem; font-weight: 800; }
+        .hsub   { font-size: 0.68rem; color: var(--t3); margin-top:1px; }
+
+        /* ── LOCK ── */
+        #lockScreen {
+            display:flex; flex-direction:column; align-items:center;
+            justify-content:center; min-height:80svh; padding:0 24px;
+        }
+        .lock-emoji { font-size:2.6rem; margin-bottom:14px; }
+        .lock-title { font-size:1.3rem; font-weight:800; margin-bottom:4px; }
+        .lock-sub   { font-size:0.78rem; color:var(--t2); margin-bottom:28px; }
+        .pin-row    { display:flex; gap:8px; width:100%; max-width:320px; }
+        .pin-input  {
+            flex:1; background:var(--card); border:1px solid var(--border2);
+            border-radius:var(--r); color:var(--t1);
+            font-family:'JetBrains Mono',monospace; font-size:1.4rem;
+            letter-spacing:0.3em; text-align:center; padding:14px;
+            outline:none; -webkit-appearance:none;
+        }
+        .pin-input:focus { border-color:var(--accent); }
+        .pin-btn {
+            padding:14px 20px; background:var(--accent); color:#0a0a0f;
+            border:none; border-radius:var(--r);
+            font-family:'Sora',sans-serif; font-weight:800; font-size:0.9rem;
+            cursor:pointer;
+        }
+        .pin-err { color:var(--red); font-size:0.75rem; margin-top:8px; text-align:center; min-height:18px; }
+
+        /* ── MAIN ── */
+        #mainForm { display:none; padding:0 18px; }
+
+        /* ── SECTION LABEL ── */
+        .slabel {
+            font-size:0.58rem; font-weight:700; letter-spacing:0.12em;
+            text-transform:uppercase; color:var(--t3);
+            margin:20px 0 7px;
+        }
+
+        /* ── PASTE BOX ── */
+        .paste-wrap { position:relative; }
+        .paste-box  {
+            width:100%; min-height:90px;
+            background:var(--card); border:1px solid var(--border2);
+            border-radius:var(--r); color:var(--t1);
+            font-family:'Sora',sans-serif; font-size:0.82rem; line-height:1.6;
+            padding:12px 14px; resize:none; outline:none;
+            -webkit-appearance:none; transition: border-color .2s;
+        }
+        .paste-box:focus { border-color:var(--accent); }
+        .paste-box::placeholder { color:var(--t3); font-size:0.78rem; }
+        .parse-btn {
+            position:absolute; bottom:10px; right:10px;
+            background:var(--accent); color:#0a0a0f;
+            border:none; border-radius:8px;
+            font-family:'Sora',sans-serif; font-size:0.72rem; font-weight:700;
+            padding:6px 12px; cursor:pointer; transition:opacity .2s;
+        }
+        .parse-btn:active { opacity:0.8; }
+
+        /* ── EXTRACTED PILL ── */
+        .extracted {
+            display:none; margin-top:8px;
+            background:var(--ad); border:1px solid rgba(0,229,160,0.2);
+            border-radius:var(--r); padding:10px 14px;
+            font-size:0.78rem; line-height:1.8;
+        }
+        .extracted.show { display:block; }
+        .ex-row { display:flex; justify-content:space-between; align-items:center; }
+        .ex-label { color:var(--t3); font-size:0.7rem; }
+        .ex-val   { font-family:'JetBrains Mono',monospace; font-weight:600; color:var(--accent); }
+        .ex-warn  { color:var(--gold); font-size:0.72rem; margin-top:6px; }
+
+        /* ── GENERIC INPUT ── */
+        .igroup { position:relative; margin-bottom:8px; }
+        .iicon  {
+            position:absolute; left:13px; top:50%; transform:translateY(-50%);
+            font-size:0.95rem; pointer-events:none; color:var(--t3); z-index:2;
+        }
+        input[type=text], input[type=number], input[type=date], select {
+            width:100%; background:var(--card); border:1px solid var(--border2);
+            border-radius:var(--r); color:var(--t1);
+            font-family:'Sora',sans-serif; font-size:0.9rem; font-weight:500;
+            padding:13px 13px 13px 40px; outline:none;
+            -webkit-appearance:none; transition:border-color .2s;
+        }
+        input:focus, select:focus { border-color:var(--accent); }
+        input::placeholder { color:var(--t3); }
+        select option { background:#1a1a26; }
+
+        .mono-input {
+            font-family:'JetBrains Mono',monospace;
+            font-size:1rem; font-weight:600; letter-spacing:0.06em;
+            text-transform:uppercase;
+        }
+        .amount-input {
+            font-family:'JetBrains Mono',monospace;
+            font-size:1.15rem; font-weight:600;
+            padding-left:56px;
+        }
+        .kes-prefix {
+            position:absolute; left:13px; top:50%; transform:translateY(-50%);
+            font-family:'JetBrains Mono',monospace; font-size:0.7rem; font-weight:700;
+            color:var(--accent); z-index:2; letter-spacing:.06em;
+        }
+
+        /* ── METHOD TOGGLE ── */
+        .method-row { display:flex; gap:8px; margin-bottom:8px; }
+        .mbtn {
+            flex:1; padding:11px 6px; background:var(--card);
+            border:1px solid var(--border2); border-radius:var(--r);
+            color:var(--t2); font-family:'Sora',sans-serif;
+            font-size:0.78rem; font-weight:700; cursor:pointer;
+            display:flex; flex-direction:column; align-items:center; gap:3px;
+            transition:all .18s;
+        }
+        .mbtn .mi { font-size:1.2rem; }
+        .mbtn.active { background:var(--ad); border-color:var(--accent); color:var(--accent); }
+
+        /* ── CREDIT MODE ── */
+        .credit-toggle { display:flex; gap:0; margin-bottom:12px; border-radius:var(--r); overflow:hidden; border:1px solid var(--border2); }
+        .ctbtn {
+            flex:1; padding:11px; background:var(--card); border:none;
+            color:var(--t2); font-family:'Sora',sans-serif;
+            font-size:0.8rem; font-weight:700; cursor:pointer;
+            transition:all .18s; border-right:1px solid var(--border2);
+        }
+        .ctbtn:last-child { border-right:none; }
+        .ctbtn.active { background:var(--ad); color:var(--accent); }
+
+        /* ── SINGLE CREDIT ── */
+        #singleCredit {}
+
+        /* ── SPLIT CREDIT ── */
+        #splitCredit { display:none; }
+
+        .split-row {
+            display:flex; gap:8px; align-items:center; margin-bottom:8px;
+        }
+        .split-alias { flex:1; }
+        .split-alias select { padding:11px 11px 11px 36px; font-size:0.85rem; }
+        .split-alias .iicon { font-size:0.8rem; }
+        .split-amt  { width:130px; flex-shrink:0; }
+        .split-amt input { padding:11px 11px 11px 46px; font-size:0.9rem; font-family:'JetBrains Mono',monospace; font-weight:600; }
+        .split-amt .kes-prefix { font-size:0.65rem; }
+        .split-del  {
+            width:34px; height:34px; flex-shrink:0;
+            background:var(--rd); border:none; border-radius:8px;
+            color:var(--red); font-size:1rem; cursor:pointer;
+            display:flex; align-items:center; justify-content:center;
+        }
+
+        .add-split-btn {
+            width:100%; padding:10px; background:transparent;
+            border:1px dashed rgba(255,255,255,0.15); border-radius:var(--r);
+            color:var(--t3); font-family:'Sora',sans-serif;
+            font-size:0.8rem; font-weight:600; cursor:pointer;
+            margin-top:2px; transition:all .18s;
+        }
+        .add-split-btn:active { border-color:var(--accent); color:var(--accent); }
+
+        /* ── BALANCE BAR ── */
+        .balance-bar {
+            margin-top:10px; padding:10px 14px;
+            background:var(--card); border-radius:var(--r);
+            border:1px solid var(--border);
+            display:flex; justify-content:space-between; align-items:center;
+        }
+        .bal-label { font-size:0.72rem; color:var(--t3); }
+        .bal-val   { font-family:'JetBrains Mono',monospace; font-size:0.95rem; font-weight:600; }
+        .bal-ok    { color:var(--accent); }
+        .bal-over  { color:var(--red); }
+        .bal-under { color:var(--gold); }
+
+        /* ── NOTES ── */
+        textarea.notes-box {
+            width:100%; background:var(--card); border:1px solid var(--border2);
+            border-radius:var(--r); color:var(--t1);
+            font-family:'Sora',sans-serif; font-size:0.82rem; line-height:1.6;
+            padding:12px 14px; resize:none; outline:none; height:72px;
+            -webkit-appearance:none; transition:border-color .2s;
+        }
+        textarea.notes-box:focus { border-color:var(--accent); }
+
+        /* ── SUBMIT ── */
+        .submit-btn {
+            width:100%; padding:16px; margin-top:20px;
+            background:var(--accent); color:#0a0a0f; border:none;
+            border-radius:var(--r); font-family:'Sora',sans-serif;
+            font-size:1rem; font-weight:800; cursor:pointer;
+            display:flex; align-items:center; justify-content:center; gap:8px;
+            transition:all .2s;
+        }
+        .submit-btn:disabled { background:rgba(0,229,160,0.25); color:rgba(10,10,15,.4); cursor:not-allowed; }
+        .submit-btn:not(:disabled):active { transform:scale(0.98); }
+
+        /* ── STATUS ── */
+        .status { display:none; margin-top:12px; padding:13px 15px; border-radius:var(--r); font-size:0.82rem; line-height:1.6; white-space:pre-line; text-align:center; }
+        .status.ok   { display:block; background:var(--ad); border:1px solid rgba(0,229,160,.25); color:var(--accent); }
+        .status.err  { display:block; background:var(--rd); border:1px solid rgba(248,113,113,.25); color:var(--red); }
+        .status.wait { display:block; background:rgba(255,255,255,.03); border:1px solid var(--border); color:var(--t2); }
+
+        /* ── RECENT LOG ── */
+        .log-head { display:flex; justify-content:space-between; align-items:center; margin-top:28px; margin-bottom:10px; }
+        .log-title { font-size:0.58rem; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--t3); }
+        .log-count { font-size:0.65rem; color:var(--t3); background:rgba(255,255,255,.05); padding:3px 9px; border-radius:20px; }
+        .log-entry {
+            background:var(--card); border:1px solid var(--border);
+            border-radius:var(--r); padding:11px 13px; margin-bottom:7px;
+        }
+        .log-top { display:flex; justify-content:space-between; align-items:center; margin-bottom:3px; }
+        .log-alias { font-size:0.85rem; font-weight:700; }
+        .log-amt   { font-family:'JetBrains Mono',monospace; font-size:0.88rem; font-weight:600; color:var(--accent); }
+        .log-meta  { font-size:0.68rem; color:var(--t3); }
+        .badge {
+            display:inline-block; font-size:0.58rem; font-weight:700;
+            letter-spacing:.06em; text-transform:uppercase;
+            padding:2px 7px; border-radius:20px; margin-left:5px;
+        }
+        .badge-m { background:var(--ad); color:var(--accent); }
+        .badge-b { background:var(--bd); color:var(--blue); }
+        .badge-s { background:rgba(251,191,36,.1); color:var(--gold); }
+        .empty-log { color:var(--t3); font-size:0.75rem; text-align:center; padding:14px 0; }
+
+        /* ── SPINNER ── */
+        @keyframes spin { to { transform:rotate(360deg); } }
+        .spin { width:17px; height:17px; border:2.5px solid rgba(10,10,15,.25); border-top-color:#0a0a0f; border-radius:50%; animation:spin .65s linear infinite; }
+
+        .divider { height:1px; background:var(--border); margin:22px 0; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <div class="hicon">💰</div>
+    <div>
+        <div class="htitle">LMF · Deposit Log</div>
+        <div class="hsub">Admin only · Private</div>
+    </div>
+</div>
+
+<!-- LOCK -->
+<div id="lockScreen">
+    <div class="lock-emoji">🔐</div>
+    <div class="lock-title">Admin Access</div>
+    <div class="lock-sub">Enter your PIN to continue</div>
+    <div class="pin-row">
+        <input class="pin-input" type="password" id="pinInput"
+               placeholder="••••" maxlength="6" inputmode="numeric" autocomplete="off">
+        <button class="pin-btn" onclick="checkPin()">Go</button>
+    </div>
+    <div class="pin-err" id="pinErr"></div>
+</div>
+
+<!-- MAIN FORM -->
+<div id="mainForm">
+
+    <!-- ① PASTE MESSAGE -->
+    <div class="slabel">① Paste M-PESA Message</div>
+    <div class="paste-wrap">
+        <textarea class="paste-box" id="msgBox" rows="4"
+            placeholder="Paste the forwarded M-PESA SMS here…&#10;&#10;e.g. UAKES4BCMP Confirmed. Ksh6,000.00 sent to ETICA CAPITAL LTD for account 308398M on 20/1/26 at 2:26 PM…"></textarea>
+        <button class="parse-btn" onclick="parseMessage()">Extract ✨</button>
+    </div>
+    <div class="extracted" id="extracted">
+        <div class="ex-row"><span class="ex-label">Code</span><span class="ex-val" id="exCode">—</span></div>
+        <div class="ex-row"><span class="ex-label">Amount</span><span class="ex-val" id="exAmt">—</span></div>
+        <div class="ex-row"><span class="ex-label">Date</span><span class="ex-val" id="exDate">—</span></div>
+        <div class="ex-row"><span class="ex-label">Account</span><span class="ex-val" id="exAcct">—</span></div>
+        <div class="ex-warn" id="exWarn"></div>
+    </div>
+
+    <!-- ② PAYMENT METHOD -->
+    <div class="slabel">② Payment Method</div>
+    <div class="method-row">
+        <button class="mbtn active" id="btnM" onclick="setMethod('MPESA')">
+            <span class="mi">📱</span>M-PESA
+        </button>
+        <button class="mbtn" id="btnB" onclick="setMethod('BANK')">
+            <span class="mi">🏦</span>Bank
+        </button>
+    </div>
+
+    <!-- ③ RECEIVED FROM -->
+    <div class="slabel">③ Received From</div>
+    <div class="igroup">
+        <span class="iicon">👤</span>
+        <select id="fromMember">
+            <option value="" disabled selected>Who made this deposit?</option>
+            <option>Tokyo</option><option>Berlin</option><option>Gandia</option>
+            <option>Denver</option><option>Helsinki</option><option>Oslo</option>
+            <option>Moscow</option><option>California</option><option>Lisbon</option>
+            <option>Stockholm</option><option>Paris</option><option>Marseille</option>
+            <option>Rio</option><option>Nairobi</option><option>Tel Aviv</option>
+            <option>Valencia</option><option>Havana</option><option>Manilla</option>
+            <option>Scofield</option><option>Bogota</option><option>Emirates</option>
+            <option>Dublin</option><option>Doha</option><option>Bern</option>
+        </select>
+    </div>
+
+    <!-- ④ AMOUNT + DATE + CODE -->
+    <div class="slabel">④ Amount, Date & Code</div>
+    <div class="igroup">
+        <span class="kes-prefix">KES</span>
+        <input type="number" class="amount-input" id="totalAmount"
+               placeholder="0" min="1" inputmode="decimal">
+    </div>
+    <div class="igroup">
+        <span class="iicon">📅</span>
+        <input type="date" id="depositDate">
+    </div>
+    <div class="igroup">
+        <span class="iicon">🔑</span>
+        <input type="text" class="mono-input" id="refCode"
+               placeholder="e.g. UAKES4BCMP" maxlength="20"
+               autocapitalize="characters" autocomplete="off">
+    </div>
+
+    <!-- ⑤ CREDIT TO -->
+    <div class="slabel">⑤ Credit To</div>
+    <div class="credit-toggle">
+        <button class="ctbtn active" id="ctSingle" onclick="setCreditMode('single')">👤 Single Member</button>
+        <button class="ctbtn"        id="ctSplit"  onclick="setCreditMode('split')">🔀 Split Between Members</button>
+    </div>
+
+    <!-- SINGLE -->
+    <div id="singleCredit">
+        <div class="igroup">
+            <span class="iicon">🎯</span>
+            <select id="creditMember">
+                <option value="" disabled selected>Select member to credit</option>
+                <option>Tokyo</option><option>Berlin</option><option>Gandia</option>
+                <option>Denver</option><option>Helsinki</option><option>Oslo</option>
+                <option>Moscow</option><option>California</option><option>Lisbon</option>
+                <option>Stockholm</option><option>Paris</option><option>Marseille</option>
+                <option>Rio</option><option>Nairobi</option><option>Tel Aviv</option>
+                <option>Valencia</option><option>Havana</option><option>Manilla</option>
+                <option>Scofield</option><option>Bogota</option><option>Emirates</option>
+                <option>Dublin</option><option>Doha</option><option>Bern</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- SPLIT -->
+    <div id="splitCredit">
+        <div id="splitRows"></div>
+        <button class="add-split-btn" onclick="addSplitRow()">＋ Add Member</button>
+        <div class="balance-bar">
+            <span class="bal-label">Unallocated</span>
+            <span class="bal-val" id="balVal">—</span>
+        </div>
+    </div>
+
+    <!-- ⑥ NOTES -->
+    <div class="slabel">⑥ Notes <span style="color:var(--t3);font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></div>
+    <textarea class="notes-box" id="notes"
+        placeholder="e.g. Member's second deposit this week, covering two months…"></textarea>
+
+    <!-- SUBMIT -->
+    <button class="submit-btn" id="submitBtn" onclick="submitDeposit()">
+        <span id="submitLabel">Log Deposit</span>
+    </button>
+    <div class="status" id="statusBox"></div>
+
+    <div class="divider"></div>
+
+    <!-- RECENT -->
+    <div class="log-head">
+        <div class="log-title">Recent Entries</div>
+        <div class="log-count" id="logCount">0 this session</div>
+    </div>
+    <div id="recentLog"></div>
+    <div class="empty-log" id="emptyLog">No entries logged yet this session</div>
+
+</div><!-- /mainForm -->
+
+<script>
+// ── CONFIG ────────────────────────────────────────────────────
+const ADMIN_PIN       = '1234';
+const APPS_SCRIPT_URL = 'YOUR_APPS_SCRIPT_WEB_APP_URL_HERE';
+
+// ── STATE ─────────────────────────────────────────────────────
+let payMethod   = 'MPESA';
+let creditMode  = 'single';
+let splitCount  = 0;
+let sessionLog  = [];
+
+const MEMBERS = [
+    'Tokyo','Berlin','Gandia','Denver','Helsinki','Oslo','Moscow',
+    'California','Lisbon','Stockholm','Paris','Marseille','Rio',
+    'Nairobi','Tel Aviv','Valencia','Havana','Manilla','Scofield',
+    'Bogota','Emirates','Dublin','Doha','Bern'
+];
+
+// ── INIT ──────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+    setToday();
+    document.getElementById('pinInput').addEventListener('keydown', e => {
+        if (e.key === 'Enter') checkPin();
+    });
+    document.getElementById('refCode').addEventListener('input', function() {
+        const p = this.selectionStart;
+        this.value = this.value.toUpperCase();
+        this.setSelectionRange(p, p);
+    });
+    document.getElementById('totalAmount').addEventListener('input', updateBalance);
+    // Add two split rows by default
+    addSplitRow(); addSplitRow();
+});
+
+function setToday() {
+    const d  = new Date();
+    const yy = d.getFullYear();
+    const mm = String(d.getMonth()+1).padStart(2,'0');
+    const dd = String(d.getDate()).padStart(2,'0');
+    document.getElementById('depositDate').value = `${yy}-${mm}-${dd}`;
+}
+
+// ── PIN ───────────────────────────────────────────────────────
+function checkPin() {
+    if (document.getElementById('pinInput').value.trim() === ADMIN_PIN) {
+        document.getElementById('lockScreen').style.display = 'none';
+        document.getElementById('mainForm').style.display   = 'block';
+    } else {
+        document.getElementById('pinErr').textContent = '❌ Wrong PIN';
+        document.getElementById('pinInput').value = '';
+        document.getElementById('pinInput').focus();
+        setTimeout(() => document.getElementById('pinErr').textContent = '', 2200);
+    }
+}
+
+// ── M-PESA PARSER ─────────────────────────────────────────────
+function parseMessage() {
+    const msg  = document.getElementById('msgBox').value.trim();
+    const el   = document.getElementById('extracted');
+    const warn = document.getElementById('exWarn');
+    warn.textContent = '';
+
+    if (!msg) { showStatus('err','Paste an M-PESA message first.'); return; }
+
+    // Code: 10-char alphanumeric at start
+    const codeM  = msg.match(/^([A-Z0-9]{10})\s+Confirmed/i);
+    // Amount: Ksh followed by number
+    const amtM   = msg.match(/Ksh([\d,]+(?:\.\d+)?)\s+sent/i);
+    // Date: on D/M/YY or DD/MM/YYYY
+    const dateM  = msg.match(/on\s+(\d{1,2})\/(\d{1,2})\/(\d{2,4})/i);
+    // Time
+    const timeM  = msg.match(/at\s+(\d{1,2}:\d{2}\s*[AP]M)/i);
+    // Account reference
+    const acctM  = msg.match(/for account\s+(\S+)/i);
+
+    const missing = [];
+    if (!codeM)  missing.push('code');
+    if (!amtM)   missing.push('amount');
+
+    if (missing.length === 2) {
+        warn.textContent = '⚠️ Could not read this message. Check format.';
+        el.classList.add('show');
+        return;
+    }
+
+    // Code
+    if (codeM) {
+        document.getElementById('refCode').value  = codeM[1];
+        document.getElementById('exCode').textContent = codeM[1];
+    }
+
+    // Amount — strip commas and decimals
+    if (amtM) {
+        const amt = Math.round(parseFloat(amtM[1].replace(/,/g,'')));
+        document.getElementById('totalAmount').value = amt;
+        document.getElementById('exAmt').textContent = 'KES ' + amt.toLocaleString();
+        updateBalance();
+    }
+
+    // Date — convert D/M/YY → YYYY-MM-DD
+    if (dateM) {
+        let yr = parseInt(dateM[3]);
+        if (yr < 100) yr += 2000;
+        const mStr = String(dateM[2]).padStart(2,'0');
+        const dStr = String(dateM[1]).padStart(2,'0');
+        const iso  = `${yr}-${mStr}-${dStr}`;
+        document.getElementById('depositDate').value = iso;
+        document.getElementById('exDate').textContent =
+            new Date(iso).toLocaleDateString('en-KE',{day:'numeric',month:'short',year:'numeric'});
+    } else {
+        document.getElementById('exDate').textContent = 'Not in message — using today';
+        warn.textContent = '⚠️ Date not found — confirm date below.';
+    }
+
+    // Account ref
+    document.getElementById('exAcct').textContent = acctM ? acctM[1] : '—';
+
+    el.classList.add('show');
+
+    // Auto-set method to MPESA
+    setMethod('MPESA');
+
+    // Scroll to from member
+    setTimeout(() => {
+        document.getElementById('fromMember').focus();
+    }, 300);
+}
+
+// ── METHOD ────────────────────────────────────────────────────
+function setMethod(m) {
+    payMethod = m;
+    document.getElementById('btnM').classList.toggle('active', m==='MPESA');
+    document.getElementById('btnB').classList.toggle('active', m==='BANK');
+}
+
+// ── CREDIT MODE ───────────────────────────────────────────────
+function setCreditMode(mode) {
+    creditMode = mode;
+    document.getElementById('ctSingle').classList.toggle('active', mode==='single');
+    document.getElementById('ctSplit').classList.toggle('active',  mode==='split');
+    document.getElementById('singleCredit').style.display = mode==='single' ? 'block' : 'none';
+    document.getElementById('splitCredit').style.display  = mode==='split'  ? 'block' : 'none';
+    updateBalance();
+}
+
+// ── SPLIT ROWS ────────────────────────────────────────────────
+function addSplitRow() {
+    splitCount++;
+    const id  = 'split_' + splitCount;
+    const div = document.createElement('div');
+    div.className = 'split-row';
+    div.id = id;
+    div.innerHTML = `
+        <div class="split-alias igroup" style="margin-bottom:0">
+            <span class="iicon">👤</span>
+            <select class="split-sel" onchange="updateBalance()">
+                <option value="" disabled selected>Member</option>
+                ${MEMBERS.map(m=>`<option>${m}</option>`).join('')}
+            </select>
+        </div>
+        <div class="split-amt igroup" style="margin-bottom:0">
+            <span class="kes-prefix">KES</span>
+            <input type="number" class="split-amt-input" placeholder="0"
+                   min="0" inputmode="decimal" oninput="updateBalance()">
+        </div>
+        <button class="split-del" onclick="removeSplitRow('${id}')" title="Remove">✕</button>
+    `;
+    document.getElementById('splitRows').appendChild(div);
+    updateBalance();
+}
+
+function removeSplitRow(id) {
+    const el = document.getElementById(id);
+    if (el) el.remove();
+    updateBalance();
+}
+
+// ── BALANCE COUNTER ───────────────────────────────────────────
+function updateBalance() {
+    if (creditMode !== 'split') return;
+    const total    = parseFloat(document.getElementById('totalAmount').value) || 0;
+    const inputs   = document.querySelectorAll('.split-amt-input');
+    const allocated = Array.from(inputs).reduce((s,i)=>s+(parseFloat(i.value)||0),0);
+    const remaining = total - allocated;
+    const el        = document.getElementById('balVal');
+    el.textContent  = (remaining === 0 ? '✅ ' : '') + 'KES ' + Math.abs(remaining).toLocaleString()
+                    + (remaining > 0 ? ' remaining' : remaining < 0 ? ' over!' : ' — balanced');
+    el.className    = 'bal-val ' + (remaining===0 ? 'bal-ok' : remaining<0 ? 'bal-over' : 'bal-under');
+}
+
+// ── SUBMIT ────────────────────────────────────────────────────
+async function submitDeposit() {
+    const from   = document.getElementById('fromMember').value;
+    const amount = parseFloat(document.getElementById('totalAmount').value);
+    const code   = document.getElementById('refCode').value.trim().toUpperCase();
+    const date   = document.getElementById('depositDate').value;
+    const notes  = document.getElementById('notes').value.trim();
+
+    if (!from)              return showStatus('err','Select who made the deposit.');
+    if (!amount || amount<=0) return showStatus('err','Enter the deposit amount.');
+    if (!code)              return showStatus('err','Enter the reference code.');
+    if (!date)              return showStatus('err','Confirm the deposit date.');
+
+    let credits = [];
+    if (creditMode === 'single') {
+        const to = document.getElementById('creditMember').value;
+        if (!to) return showStatus('err','Select a member to credit.');
+        credits = [{ alias: to, amount }];
+    } else {
+        const rows = document.querySelectorAll('.split-row');
+        rows.forEach(row => {
+            const alias = row.querySelector('.split-sel').value;
+            const amt   = parseFloat(row.querySelector('.split-amt-input').value) || 0;
+            if (alias && amt > 0) credits.push({ alias, amount: amt });
+        });
+        if (credits.length === 0) return showStatus('err','Add at least one member to the split.');
+        const total = credits.reduce((s,c)=>s+c.amount, 0);
+        if (Math.abs(total - amount) > 0.01)
+            return showStatus('err', `Split amounts (KES ${total.toLocaleString()}) don't match total (KES ${amount.toLocaleString()}).`);
+    }
+
+    // Loading
+    const btn = document.getElementById('submitBtn');
+    const lbl = document.getElementById('submitLabel');
+    btn.disabled = true;
+    lbl.innerHTML = '<div class="spin"></div> Logging…';
+    showStatus('wait','Sending to Google Sheets…');
+
+    const payload = {
+        timestamp:  new Date().toISOString(),
+        date, week: weekNum(new Date(date)),
+        from, method: payMethod,
+        totalAmount: amount,
+        refCode: code, notes,
+        credits,  // array of {alias, amount}
+        isSplit: creditMode === 'split'
+    };
+
+    try {
+        if (APPS_SCRIPT_URL === 'YOUR_APPS_SCRIPT_WEB_APP_URL_HERE') {
+            await new Promise(r=>setTimeout(r,1200));
+            onSuccess(payload);
+        } else {
+            await fetch(APPS_SCRIPT_URL, {
+                method:'POST', mode:'no-cors',
+                headers:{'Content-Type':'application/json'},
+                body: JSON.stringify(payload)
+            });
+            onSuccess(payload);
+        }
+    } catch(err) {
+        showStatus('err','❌ Failed. Check connection.\n'+err.message);
+        btn.disabled = false;
+        lbl.textContent = 'Log Deposit';
+    }
+}
+
+function onSuccess(payload) {
+    const creditDesc = payload.isSplit
+        ? payload.credits.map(c=>`${c.alias} KES ${c.amount.toLocaleString()}`).join(', ')
+        : `${payload.credits[0].alias}`;
+    showStatus('ok',
+        `✅ Logged!\n${payload.refCode} · KES ${payload.totalAmount.toLocaleString()}\nFrom: ${payload.from} → ${creditDesc}`
+    );
+
+    sessionLog.unshift(payload);
+    renderLog();
+
+    // Reset
+    document.getElementById('fromMember').value  = '';
+    document.getElementById('totalAmount').value = '';
+    document.getElementById('refCode').value     = '';
+    document.getElementById('notes').value       = '';
+    document.getElementById('msgBox').value      = '';
+    document.getElementById('extracted').classList.remove('show');
+    document.getElementById('creditMember').value = '';
+    document.querySelectorAll('.split-amt-input').forEach(i=>i.value='');
+    document.querySelectorAll('.split-sel').forEach(s=>s.selectedIndex=0);
+    updateBalance();
+
+    document.getElementById('submitBtn').disabled = false;
+    document.getElementById('submitLabel').textContent = 'Log Deposit';
+    window.scrollTo({top:0,behavior:'smooth'});
+}
+
+// ── RECENT LOG ────────────────────────────────────────────────
+function renderLog() {
+    const container = document.getElementById('recentLog');
+    const empty     = document.getElementById('emptyLog');
+    document.getElementById('logCount').textContent = sessionLog.length + ' this session';
+
+    if (!sessionLog.length) { empty.style.display='block'; container.innerHTML=''; return; }
+    empty.style.display = 'none';
+
+    container.innerHTML = sessionLog.slice(0,10).map(e => {
+        const badge = e.isSplit
+            ? `<span class="badge badge-s">SPLIT</span>`
+            : `<span class="badge badge-m">${e.method}</span>`;
+        const creditLines = e.credits.map(c=>
+            `<span style="color:var(--t2)">${c.alias}</span> <span style="color:var(--accent);font-family:'JetBrains Mono',monospace;font-size:.8rem">+${c.amount.toLocaleString()}</span>`
+        ).join(' &nbsp;·&nbsp; ');
+        return `
+        <div class="log-entry">
+            <div class="log-top">
+                <div class="log-alias">${e.from} ${badge}</div>
+                <div class="log-amt">KES ${e.totalAmount.toLocaleString()}</div>
+            </div>
+            <div class="log-meta">${e.date} · ${e.refCode} · Credit: ${creditLines}</div>
+        </div>`;
+    }).join('');
+}
+
+// ── HELPERS ──────────────────────────────────────────────────
+function showStatus(type, msg) {
+    const el = document.getElementById('statusBox');
+    el.className = 'status ' + type;
+    el.textContent = msg;
+}
+
+function weekNum(d) {
+    const date = new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));
+    const day  = date.getUTCDay()||7;
+    date.setUTCDate(date.getUTCDate()+4-day);
+    const y = new Date(Date.UTC(date.getUTCFullYear(),0,1));
+    return 'W'+Math.ceil((((date-y)/86400000)+1)/7);
+}
+</script>
+</body>
+</html>
