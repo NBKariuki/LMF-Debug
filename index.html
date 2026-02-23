@@ -42,8 +42,8 @@ button,select,input{touch-action:manipulation;font-family:inherit;}
 [data-theme=light] .knob{transform:translateX(24px);}
 [data-theme=light] .sw{background:var(--acl);border-color:var(--ac);}
 
-.greet{padding:10px 20px 8px;}
-.greet-line{font-size:.84rem;font-weight:500;line-height:1.4;color:var(--t2);letter-spacing:.01em;}
+.greet{padding:22px 20px 10px;}
+.greet-line{font-size:.84rem;font-weight:500;line-height:1.4;color:var(--t1);letter-spacing:.01em;}
 
 
 .tabs{padding:0 16px;margin-top:16px;display:flex;gap:0;border-bottom:2px solid var(--br2);position:sticky;top:0;z-index:50;background:var(--bg);align-items:flex-end;}
@@ -781,18 +781,18 @@ function App() {
                 <div className="blob3"/>
                 <div className="scards">
                   <div className="sc sc1" onClick={openContrib}>
-                    <div className="sc-ico">&#128737;</div>
+                    <div className="sc-ico">&#128200;<div>
                     <div className="sc-lbl">View Group Contributions</div>
                     <div className="sc-arr">&#8599;</div>
                   </div>
                   <div className="sc sc2" onClick={() => setAllView(true)}>
-                    <div className="sc-ico">&#8652;</div>
+                    <div className="sc-ico">&#128176;<div>
                     <div className="sc-lbl">View Group Saving &amp; Interest</div>
                     <div className="sc-arr">&#8594;</div>
                   </div>
                   <div className="sc sc3">
                     <div className="sc3-head">
-                      <div className="sc-ico" style={{background:'rgba(0,200,122,.20)'}}>&#10227;</div>
+                      <div className="sc-ico" style={{background:'rgba(0,200,122,.22)'}}>&#9878;<div>
                       <div className="sc-lbl">Group Balance</div>
                     </div>
                     <div className="c3nums">
@@ -911,7 +911,7 @@ function App() {
                   A/C No: <strong>0180 28395 1027</strong><br/>
                   Reference: <strong>308398M</strong>
                 </div>
-                <div className="dep-w">&#9888;&#65039; Always use <strong>308398M</strong> as Reference / Remarks.</div>
+                <div className="dep-w">&#9888;&#65039; Always indicate <strong>308398M</strong> on the Reference / Remarks section.</div>
               </div>
             </div>
           </div>
@@ -923,7 +923,7 @@ function App() {
                 <li>Minimum contribution: <strong>KES 4,000/month</strong></li>
                 <li>Interest only on months with full minimum</li>
                 <li>Withdrawals in December (before Week 3)</li>
-                <li>Fund: <strong>Etica MMF</strong> &mdash; 12% APY (1% monthly)</li>
+                <li>Fund: <strong>Etica MMF</strong></li>
                 <li>Maximum members: <strong>15</strong></li>
               </ul>
             </div>
