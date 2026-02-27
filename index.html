@@ -414,6 +414,60 @@ const CITY_ICON = {
   Scofield:   '🔑', Bogota:    '☁️', Emirates:  '🌇',
   Dublin:     '🍀', Doha:      '🌙', Bern:      '🐻‍❄️'
 };
+
+const CITY_COLOR = {
+  Tokyo:      'rgba(239,68,68,.15)',
+  Berlin:     'rgba(168,85,247,.15)',
+  Gandia:     'rgba(245,158,11,.15)',
+  Denver:     'rgba(59,130,246,.15)',
+  Helsinki:   'rgba(20,184,166,.15)',
+  Oslo:       'rgba(16,185,129,.15)',
+  Moscow:     'rgba(99,102,241,.15)',
+  California: 'rgba(251,146,60,.15)',
+  Lisbon:     'rgba(236,72,153,.15)',
+  Stockholm:  'rgba(234,179,8,.15)',
+  Paris:      'rgba(59,130,246,.15)',
+  Marseille:  'rgba(14,165,233,.15)',
+  Rio:        'rgba(6,182,212,.15)',
+  Nairobi:    'rgba(132,204,22,.15)',
+  'Tel Aviv': 'rgba(168,85,247,.15)',
+  Valencia:   'rgba(249,115,22,.15)',
+  Havana:     'rgba(239,68,68,.15)',
+  Manilla:    'rgba(236,72,153,.15)',
+  Scofield:   'rgba(100,116,139,.15)',
+  Bogota:     'rgba(20,184,166,.15)',
+  Emirates:   'rgba(234,179,8,.15)',
+  Dublin:     'rgba(34,197,94,.15)',
+  Doha:       'rgba(99,102,241,.15)',
+  Bern:       'rgba(14,165,233,.15)'
+};
+
+const CITY_BORDER = {
+  Tokyo:      'rgba(239,68,68,.3)',
+  Berlin:     'rgba(168,85,247,.3)',
+  Gandia:     'rgba(245,158,11,.3)',
+  Denver:     'rgba(59,130,246,.3)',
+  Helsinki:   'rgba(20,184,166,.3)',
+  Oslo:       'rgba(16,185,129,.3)',
+  Moscow:     'rgba(99,102,241,.3)',
+  California: 'rgba(251,146,60,.3)',
+  Lisbon:     'rgba(236,72,153,.3)',
+  Stockholm:  'rgba(234,179,8,.3)',
+  Paris:      'rgba(59,130,246,.3)',
+  Marseille:  'rgba(14,165,233,.3)',
+  Rio:        'rgba(6,182,212,.3)',
+  Nairobi:    'rgba(132,204,22,.3)',
+  'Tel Aviv': 'rgba(168,85,247,.3)',
+  Valencia:   'rgba(249,115,22,.3)',
+  Havana:     'rgba(239,68,68,.3)',
+  Manilla:    'rgba(236,72,153,.3)',
+  Scofield:   'rgba(100,116,139,.3)',
+  Bogota:     'rgba(20,184,166,.3)',
+  Emirates:   'rgba(234,179,8,.3)',
+  Dublin:     'rgba(34,197,94,.3)',
+  Doha:       'rgba(99,102,241,.3)',
+  Bern:       'rgba(14,165,233,.3)'
+};
 const MONTHS = ['January','February','March','April','May','June',
   'July','August','September','October','November','December'];
 
@@ -1113,7 +1167,12 @@ function App() {
                   <div className="alias-grid-wrap">
                     <div className="alias-grid">
                       {MEMBERS.map(a => (
-                        <div key={a} className={'alias-cell' + (alias === a ? ' sel' : '')}
+                        <div key={a}
+                          className={'alias-cell' + (alias === a ? ' sel' : '')}
+                          style={{
+                            background: alias === a ? 'var(--acl)' : CITY_COLOR[a],
+                            borderColor: alias === a ? 'var(--ac)'  : CITY_BORDER[a]
+                          }}
                           onClick={() => { setAlias(a); setOpenDrop(null); }}>
                           <span className="alias-cell-ico">{CITY_ICON[a]}</span>
                           <span className="alias-cell-lbl">{a}</span>
