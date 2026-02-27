@@ -971,23 +971,26 @@ function App() {
         mlines.slice(1).forEach((line, idx) => {
           const cols  = parseRow(line);
           const name  = cols[iA]?.trim().replace(/"/g,'');
-          const icon  = cols[iI]?.trim().replace(/"/g,'') || '👤';
+          const icon  = cols[iI]?.trim().replace(/"/g,'').trim() || '';
           const pair  = cols[iP]?.trim().replace(/"/g,'') || '';
           if (!name) return;
           parsed.push(name);
           if (pair) { parsedPairs[name] = pair; }
-          // Assign colour if not already in hardcoded map
+          // Colour: use hardcoded if exists, otherwise assign from palette
           if (!liveColor[name]) {
             const [bg, br] = PALETTE[idx % PALETTE.length];
             liveColor[name]  = bg;
             liveBorder[name] = br;
           }
-          if (!liveIcon[name]) liveIcon[name] = icon;
-          else liveIcon[name] = icon; // always use sheet icon if provided
+          // Icon: sheet ALWAYS wins — only fall back to hardcoded if sheet cell is blank
+          const cleanIcon = icon.replace(/"/g,'').trim();
+          liveIcon[name] = cleanIcon || CITY_ICON[name] || '👤';
         });
         if (parsed.length > 0) {
           liveMembers = parsed;
           livePairs   = parsedPairs;
+          console.log('✅ Members loaded from sheet:', parsed.length, 'members');
+          console.log('📍 Icons from sheet:', Object.fromEntries(parsed.map(n => [n, liveIcon[n]])));
           setMembers(parsed);
           setPairs(parsedPairs);
           setCityIcon(liveIcon);
