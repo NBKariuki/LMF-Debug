@@ -350,6 +350,22 @@ button,select,input{touch-action:manipulation;font-family:inherit;}
 @keyframes up{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
 @keyframes rot{to{transform:rotate(360deg)}}
 @keyframes shk{0%,100%{transform:none}25%{transform:translateX(-10px)}75%{transform:translateX(10px)}}
+
+/* ── Custom dropdown wrapper (alias + statements) ── */
+.cdrop{position:relative;width:100%;}
+.cdrop-btn{width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;cursor:pointer;border:none;text-align:left;}
+.cdrop-btn.asel-btn{padding:12px 14px;background:var(--ibg);border:1px solid var(--br2);border-radius:14px;color:var(--t1);font-family:'DM Sans',sans-serif;font-size:var(--t-subhead);font-weight:600;}
+.cdrop-btn.asel-btn:focus-visible{outline:2px solid var(--ac);}
+.cdrop-btn.ssel-btn{padding:11px 13px;background:var(--acl);border:1px solid rgba(0,200,122,.22);border-radius:14px;color:var(--ac);font-family:'DM Sans',sans-serif;font-size:.88rem;font-weight:700;}
+.cdrop-btn.ssel-btn:focus-visible{outline:2px solid var(--ac);}
+.cdrop-arrow{flex-shrink:0;transition:transform .2s;font-size:.65rem;opacity:.55;}
+.cdrop-arrow.open{transform:rotate(180deg);}
+.cdrop-list{position:absolute;top:calc(100% + 6px);left:0;right:0;background:var(--card);border:1px solid var(--br2);border-radius:16px;z-index:999;max-height:260px;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.28);padding:6px;animation:up .15s ease;}
+.cdrop-item{padding:10px 13px;border-radius:10px;font-size:var(--t-subhead);font-weight:500;color:var(--t2);cursor:pointer;display:flex;align-items:center;gap:8px;transition:background .1s;}
+.cdrop-item:hover{background:var(--ibg);}
+.cdrop-item.sel{color:var(--ac);font-weight:700;background:var(--acl);}
+.cdrop-item .chk{font-size:.7rem;flex-shrink:0;}
+.pdf-msg{margin-top:10px;padding:11px 13px;background:var(--gdl);border:1px solid rgba(245,158,11,.3);border-radius:12px;font-size:var(--t-footnote);color:var(--gd);line-height:1.5;}
 </style>
 </head>
 <body>
@@ -788,6 +804,7 @@ function App() {
   const [allView, setAllView]  = useState(false);
   const [ts,      setTs]       = useState(null);
   const [pdfMsg,  setPdfMsg]   = useState(null);
+  const [openDrop, setOpenDrop] = useState(null); // 'alias' | 'stmt' | null
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -795,6 +812,17 @@ function App() {
   }, [theme]);
 
   useEffect(() => { if (auth) load(); }, [auth]);
+
+  useEffect(() => {
+    if (!openDrop) return;
+    const handler = e => {
+      const id = 'drop-' + (openDrop === 'alias' ? 'alias' : 'stmt');
+      const el = document.getElementById(id);
+      if (el && !el.contains(e.target)) setOpenDrop(null);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [openDrop]);
 
   const load = async () => {
     try {
@@ -1027,10 +1055,23 @@ function App() {
 
           <div className="acrd">
             <div className="albl">Who are you?</div>
-            <select className="asel" value={alias} onChange={e => setAlias(e.target.value)}>
-              <option value="" disabled>Select your alias&hellip;</option>
-              {MEMBERS.map(a => <option key={a} value={a}>{a}</option>)}
-            </select>
+            <div className="cdrop" id="drop-alias">
+              <button className="cdrop-btn asel-btn" onClick={() => setOpenDrop(openDrop === 'alias' ? null : 'alias')}>
+                <span style={{color: alias ? 'var(--t1)' : 'var(--t3)'}}>{alias || 'Select your alias\u2026'}</span>
+                <span className={'cdrop-arrow' + (openDrop === 'alias' ? ' open' : '')}>&#9660;</span>
+              </button>
+              {openDrop === 'alias' && (
+                <div className="cdrop-list">
+                  {MEMBERS.map(a => (
+                    <div key={a} className={'cdrop-item' + (alias === a ? ' sel' : '')}
+                      onClick={() => { setAlias(a); setOpenDrop(null); }}>
+                      {alias === a && <span className="chk">&#10003;</span>}
+                      {a}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           {alias ? <>
@@ -1133,36 +1174,39 @@ function App() {
             <div className="morehead">&#128196; Etica Monthly Statements</div>
             <div className="morebody">
               <div className="pdf-pw">PDF Password: 308398</div>
-              <select className="ssel" onChange={e => {
-                if (!e.target.value) return;
-                const m = e.target.value;
-                const base = window.location.href.split('/').slice(0, -1).join('/');
-                const url  = base + '/' + m + '_2026_Statement.pdf';
-                e.target.value = '';
-                fetch(url, {method:'HEAD'})
-                  .then(r => {
-                    if (r.ok) {
-                      window.open(url, '_blank');
-                      setPdfMsg(null);
-                    } else {
-                      const msgs = [
-                        'The ' + m + ' statement is still being prepared. Check back soon!',
-                        m + ' numbers are being finalised. Almost ready!'
-                      ];
-                      setPdfMsg(msgs[Math.floor(Math.random()*msgs.length)]);
-                      setTimeout(() => setPdfMsg(null), 7000);
-                    }
-                  })
-                  .catch(() => { window.open(url, '_blank'); });
-              }}>
-                <option value="">&#128229; Select Month to Download</option>
-                {MONTHS.map(m => <option key={m} value={m}>{m}</option>)}
-              </select>
-              {pdfMsg && (
-                <div style={{marginTop:'10px',padding:'11px 13px',background:'rgba(255,193,7,0.12)',border:'1px solid rgba(255,193,7,0.35)',borderRadius:'12px',fontSize:'0.82rem',lineHeight:'1.5',color:'rgba(255,230,120,0.95)'}}>
-                  ⏳ {pdfMsg}
-                </div>
-              )}
+              <div className="cdrop" id="drop-stmt">
+                <button className="cdrop-btn ssel-btn" onClick={() => setOpenDrop(openDrop === 'stmt' ? null : 'stmt')}>
+                  <span>&#128229; Select Month to Download</span>
+                  <span className={'cdrop-arrow' + (openDrop === 'stmt' ? ' open' : '')}>&#9660;</span>
+                </button>
+                {openDrop === 'stmt' && (
+                  <div className="cdrop-list">
+                    {MONTHS.map(m => (
+                      <div key={m} className="cdrop-item" onClick={() => {
+                        setOpenDrop(null);
+                        const base = window.location.href.split('/').slice(0, -1).join('/');
+                        const url  = base + '/' + m + '_2026_Statement.pdf';
+                        fetch(url, {method:'HEAD'})
+                          .then(r => {
+                            if (r.ok) {
+                              window.open(url, '_blank');
+                              setPdfMsg(null);
+                            } else {
+                              const msgs = [
+                                'The ' + m + ' statement is still being prepared. Check back soon!',
+                                m + ' numbers are being finalised. Almost ready!'
+                              ];
+                              setPdfMsg(msgs[Math.floor(Math.random()*msgs.length)]);
+                              setTimeout(() => setPdfMsg(null), 7000);
+                            }
+                          })
+                          .catch(() => { window.open(url, '_blank'); });
+                      }}>{m}</div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              {pdfMsg && <div className="pdf-msg">⏳ {pdfMsg}</div>}
             </div>
           </div>
 
