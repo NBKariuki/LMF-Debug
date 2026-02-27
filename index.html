@@ -377,6 +377,19 @@ button,select,input{touch-action:manipulation;font-family:inherit;}
 .modal-item:last-child{border-bottom:none;}
 .modal-item:hover,.modal-item:active{background:var(--ibg);}
 .modal-cancel{display:block;width:calc(100% - 32px);margin:10px 16px 0;padding:14px;background:var(--ibg);border:1px solid var(--br2);border-radius:14px;font-size:var(--t-body);font-weight:700;color:var(--t3);cursor:pointer;text-align:center;}
+
+/* ── Alias picker modal grid ── */
+.modal-sheet.alias-sheet{max-height:82svh;display:flex;flex-direction:column;}
+.alias-grid-wrap{overflow-y:auto;flex:1;padding:4px 12px 0;}
+.alias-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding-bottom:8px;}
+.alias-cell{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;padding:14px 8px;border-radius:16px;background:var(--ibg);border:1px solid var(--br);cursor:pointer;transition:all .15s;text-align:center;}
+.alias-cell:active{transform:scale(.95);}
+.alias-cell.sel{background:var(--acl);border-color:var(--ac);}
+.alias-cell-ico{font-size:1.6rem;line-height:1;}
+.alias-cell-lbl{font-size:var(--t-footnote);font-weight:700;color:var(--t1);line-height:1.2;}
+.alias-cell.sel .alias-cell-lbl{color:var(--ac);}
+.alias-sel-display{display:flex;align-items:center;gap:8px;}
+.alias-sel-ico{font-size:1.1rem;}
 </style>
 </head>
 <body>
@@ -390,6 +403,17 @@ const MEMBERS = [
   'Tel Aviv','Valencia','Havana','Manilla','Scofield','Bogota',
   'Emirates','Dublin','Doha','Bern'
 ];
+
+const CITY_ICON = {
+  Tokyo:      '🗼', Berlin:    '🐻', Gandia:    '🏖️',
+  Denver:     '🏔️', Helsinki:  '🇫🇮', Oslo:      '🫎',
+  Moscow:     '🏛️', California:'🌴', Lisbon:    '🛸',
+  Stockholm:  '👑', Paris:     '🗽', Marseille: '⚓',
+  Rio:        '🌊', Nairobi:   '🦁', 'Tel Aviv': '✡️',
+  Valencia:   '🍊', Havana:    '🎺', Manilla:   '🌺',
+  Scofield:   '🔑', Bogota:    '☁️', Emirates:  '🌇',
+  Dublin:     '🍀', Doha:      '🌙', Bern:      '🐻‍❄️'
+};
 const MONTHS = ['January','February','March','April','May','June',
   'July','August','September','October','November','December'];
 
@@ -1066,24 +1090,42 @@ function App() {
 
           <div className="acrd">
             <div className="albl">Who are you?</div>
-            <div className="cdrop" id="drop-alias">
-              <button className="cdrop-btn asel-btn" onClick={() => setOpenDrop(openDrop === 'alias' ? null : 'alias')}>
-                <span style={{color: alias ? 'var(--t1)' : 'var(--t3)'}}>{alias || 'Select your alias\u2026'}</span>
-                <span className={'cdrop-arrow' + (openDrop === 'alias' ? ' open' : '')}>&#9660;</span>
-              </button>
-              {openDrop === 'alias' && (
-                <div className="cdrop-list">
-                  {MEMBERS.map(a => (
-                    <div key={a} className={'cdrop-item' + (alias === a ? ' sel' : '')}
-                      onClick={() => { setAlias(a); setOpenDrop(null); }}>
-                      {alias === a && <span className="chk">&#10003;</span>}
-                      {a}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+            <button className="cdrop-btn asel-btn" style={{width:'100%'}} onClick={() => setOpenDrop('alias')}>
+              {alias
+                ? <span className="alias-sel-display">
+                    <span className="alias-sel-ico">{CITY_ICON[alias]}</span>
+                    <span style={{color:'var(--t1)'}}>{alias}</span>
+                  </span>
+                : <span style={{color:'var(--t3)'}}>Select your alias&hellip;</span>
+              }
+              <span style={{fontSize:'.65rem',opacity:.55}}>&#9660;</span>
+            </button>
           </div>
+
+          {/* ALIAS MODAL */}
+          {openDrop === 'alias' && (
+            <>
+              <div className="modal-blur" onClick={() => setOpenDrop(null)} />
+              <div className="modal-overlay" onClick={() => setOpenDrop(null)}>
+                <div className="modal-sheet alias-sheet" onClick={e => e.stopPropagation()}>
+                  <div className="modal-handle" />
+                  <div className="modal-title">&#128100; Who are you?</div>
+                  <div className="alias-grid-wrap">
+                    <div className="alias-grid">
+                      {MEMBERS.map(a => (
+                        <div key={a} className={'alias-cell' + (alias === a ? ' sel' : '')}
+                          onClick={() => { setAlias(a); setOpenDrop(null); }}>
+                          <span className="alias-cell-ico">{CITY_ICON[a]}</span>
+                          <span className="alias-cell-lbl">{a}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <button className="modal-cancel" onClick={() => setOpenDrop(null)}>Cancel</button>
+                </div>
+              </div>
+            </>
+          )}
 
           {alias ? <>
             <div className="scrd">
