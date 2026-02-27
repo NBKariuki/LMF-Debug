@@ -729,11 +729,6 @@
         .tour-dot.active {
             background: #84fab0;
         }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(-4px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
     </style>
 </head>
 <body>
@@ -1271,120 +1266,6 @@
         }
 
         // Main App Wrapper with Password Check
-        // Dynamically resolve base URL so PDF paths work regardless of repo name
-        const GITHUB_PAGES_BASE = (() => {
-            const loc = window.location.href;
-            // Strip trailing filename/hash/query to get folder
-            return loc.replace(/\/[^/]*(\?.*)?$/, '');
-        })();
-
-        // Etica Statement Picker - styled in-page notification, no alert()
-        function EticaStatementPicker() {
-            const [notification, setNotification] = useState(null);
-            const [notifType, setNotifType] = useState('info'); // 'info' or 'success'
-
-            const FUN_MESSAGES = [
-                (m) => `The ${m} statement is still cooking in our financial kitchen... Check back soon! 🍳`,
-                (m) => `${m}'s numbers are still being crunched. Almost ready! 🧮`,
-                (m) => `Still dotting the i's and crossing the t's on ${m}... Patience! ✍️`,
-                (m) => `The ${m} statement isn't available yet — your patience will be rewarded! ⭐`,
-                (m) => `${m} statement is under construction... Hard hats required! 👷`
-            ];
-
-            const handleChange = (e) => {
-                const month = e.target.value;
-                e.target.value = '';
-                if (!month) return;
-
-                // Build PDF URL relative to current page location
-                const pdfUrl = `${GITHUB_PAGES_BASE}/${month}_${CURRENT_YEAR}_Statement.pdf`;
-
-                // Use XMLHttpRequest which respects same-origin on GitHub Pages
-                // and gives us a real status code (unlike fetch no-cors which always "succeeds")
-                const xhr = new XMLHttpRequest();
-                xhr.open('HEAD', pdfUrl, true);
-                xhr.timeout = 8000;
-                xhr.onload = function() {
-                    if (xhr.status === 200) {
-                        window.open(pdfUrl, '_blank');
-                        setNotifType('success');
-                        setNotification(`Opening ${month} statement now. Remember, password is 308398.`);
-                    } else {
-                        // File not yet uploaded
-                        const msg = FUN_MESSAGES[Math.floor(Math.random() * FUN_MESSAGES.length)](month);
-                        setNotifType('info');
-                        setNotification(msg);
-                    }
-                    setTimeout(() => setNotification(null), 7000);
-                };
-                xhr.onerror = function() {
-                    // CORS or network error — open directly and let browser handle it
-                    window.open(pdfUrl, '_blank');
-                    setNotifType('success');
-                    setNotification(`Opening ${month} statement. If it doesn't load, it may not be uploaded yet.`);
-                    setTimeout(() => setNotification(null), 7000);
-                };
-                xhr.ontimeout = function() {
-                    const msg = FUN_MESSAGES[Math.floor(Math.random() * FUN_MESSAGES.length)](month);
-                    setNotifType('info');
-                    setNotification(msg);
-                    setTimeout(() => setNotification(null), 7000);
-                };
-                xhr.send();
-            };
-
-            return (
-                <div>
-                    <select
-                        onChange={handleChange}
-                        style={{
-                            width: '100%',
-                            padding: '12px 14px',
-                            fontSize: '0.9rem',
-                            fontWeight: '600',
-                            background: 'rgba(132, 250, 176, 0.1)',
-                            color: '#84fab0',
-                            border: '1px solid rgba(132, 250, 176, 0.3)',
-                            borderRadius: '10px',
-                            fontFamily: 'Outfit, sans-serif',
-                            cursor: 'pointer',
-                            transition: 'all 0.3s ease',
-                            marginBottom: notification ? '10px' : '0'
-                        }}
-                    >
-                        <option value="">📥 Select Month to Download</option>
-                        {MONTHS.map(month => (
-                            <option key={month} value={month} style={{ background: '#1a1a2e', color: '#fff' }}>
-                                {month}
-                            </option>
-                        ))}
-                    </select>
-
-                    {notification && (
-                        <div style={{
-                            marginTop: '10px',
-                            padding: '12px 14px',
-                            background: notifType === 'success'
-                                ? 'rgba(132, 250, 176, 0.12)'
-                                : 'rgba(255, 193, 7, 0.12)',
-                            border: \`1px solid \${notifType === 'success' ? 'rgba(132, 250, 176, 0.4)' : 'rgba(255, 193, 7, 0.4)'}\`,
-                            borderRadius: '10px',
-                            fontSize: '0.82rem',
-                            lineHeight: '1.5',
-                            color: notifType === 'success' ? '#84fab0' : 'rgba(255, 235, 150, 0.95)',
-                            display: 'flex',
-                            alignItems: 'flex-start',
-                            gap: '8px',
-                            animation: 'fadeIn 0.3s ease'
-                        }}>
-                            <span style={{ flexShrink: 0 }}>{notifType === 'success' ? '📂' : '⏳'}</span>
-                            <span>{notification}</span>
-                        </div>
-                    )}
-                </div>
-            );
-        }
-
         function AppWithAuth() {
             const [showTour, setShowTour] = useState(() => !localStorage.getItem('mmf_tour_seen'));
 
@@ -1566,6 +1447,7 @@
             const [fileLastModified, setFileLastModified] = useState(null);
             const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
             const [tourSidebarActive, setTourSidebarActive] = useState(false);
+            const [statementMsg, setStatementMsg] = useState(null);
 
             useEffect(() => {
                 loadDataFromGoogleSheets();
@@ -1850,7 +1732,78 @@
                                 }}>
                                     Password: 308398
                                 </div>
-                                <EticaStatementPicker />
+                                <select 
+                                    className="statements-dropdown"
+                                    onChange={(e) => {
+                                        if (e.target.value) {
+                                            const selectedMonth = e.target.value;
+                                            const base = window.location.href.split('/').slice(0, -1).join('/');
+                                            const pdfUrl = base + '/' + selectedMonth + '_' + CURRENT_YEAR + '_Statement.pdf';
+                                            
+                                            // Try to open PDF, show styled message if not available
+                                            fetch(pdfUrl, { method: 'HEAD' })
+                                                .then(response => {
+                                                    if (response.ok) {
+                                                        window.open(pdfUrl, '_blank');
+                                                        setStatementMsg(null);
+                                                    } else {
+                                                        const messages = [
+                                                            selectedMonth + ' statement is still being prepared. Check back soon!',
+                                                            selectedMonth + "'s numbers are being crunched. Almost ready!",
+                                                            'Still finalising the ' + selectedMonth + ' statement. Patience!',
+                                                            selectedMonth + ' statement not available yet — your patience will be rewarded!',
+                                                            selectedMonth + ' statement is under construction. Check back shortly!'
+                                                        ];
+                                                        setStatementMsg(messages[Math.floor(Math.random() * messages.length)]);
+                                                        setTimeout(() => setStatementMsg(null), 7000);
+                                                    }
+                                                })
+                                                .catch(() => {
+                                                    window.open(pdfUrl, '_blank');
+                                                });
+                                            
+                                            e.target.value = ''; // Reset dropdown
+                                        }
+                                    }}
+                                    style={{
+                                        width: '100%',
+                                        padding: '12px 14px',
+                                        fontSize: '0.9rem',
+                                        fontWeight: '600',
+                                        background: 'rgba(132, 250, 176, 0.1)',
+                                        color: '#84fab0',
+                                        border: '1px solid rgba(132, 250, 176, 0.3)',
+                                        borderRadius: '10px',
+                                        fontFamily: 'Outfit, sans-serif',
+                                        cursor: 'pointer',
+                                        transition: 'all 0.3s ease'
+                                    }}
+                                >
+                                    <option value="">📥 Select Month to Download</option>
+                                    {MONTHS.map(month => (
+                                        <option 
+                                            key={month} 
+                                            value={month}
+                                            style={{ background: '#1a1a2e', color: '#fff' }}
+                                        >
+                                            {month}
+                                        </option>
+                                    ))}
+                                </select>
+                                {statementMsg && (
+                                    <div style={{
+                                        marginTop: '10px',
+                                        padding: '12px 14px',
+                                        background: 'rgba(255, 193, 7, 0.12)',
+                                        border: '1px solid rgba(255, 193, 7, 0.4)',
+                                        borderRadius: '10px',
+                                        fontSize: '0.82rem',
+                                        lineHeight: '1.5',
+                                        color: 'rgba(255, 235, 150, 0.95)'
+                                    }}>
+                                        ⏳ {statementMsg}
+                                    </div>
+                                )}
                             </div>
                         </aside>
 
@@ -2136,97 +2089,6 @@
             );
         }
 
-        // Custom styled alias picker
-        function AliasDropdown({ selectedAlias, setSelectedAlias }) {
-            const [open, setOpen] = useState(false);
-            const ref = React.useRef(null);
-
-            // Close on outside click
-            React.useEffect(() => {
-                const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
-                document.addEventListener('mousedown', handler);
-                return () => document.removeEventListener('mousedown', handler);
-            }, []);
-
-            const pick = (alias) => { setSelectedAlias(alias); setOpen(false); };
-
-            return (
-                <div className="alias-selector" ref={ref} style={{ position: 'relative', marginBottom: '25px' }}>
-                    <button
-                        onClick={() => setOpen(o => !o)}
-                        style={{
-                            width: '100%',
-                            padding: '14px 16px',
-                            fontSize: '1rem',
-                            fontWeight: '600',
-                            background: 'rgba(255, 255, 255, 0.08)',
-                            color: selectedAlias ? '#fff' : 'rgba(255,255,255,0.45)',
-                            border: `2px solid ${open ? '#84fab0' : 'rgba(132, 250, 176, 0.3)'}`,
-                            borderRadius: '12px',
-                            fontFamily: 'Outfit, sans-serif',
-                            cursor: 'pointer',
-                            textAlign: 'left',
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            transition: 'all 0.25s ease'
-                        }}
-                    >
-                        <span>{selectedAlias || '👆 Select your alias to view balance'}</span>
-                        <span style={{
-                            fontSize: '0.7rem',
-                            opacity: 0.7,
-                            transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
-                            transition: 'transform 0.25s ease',
-                            marginLeft: '8px'
-                        }}>▼</span>
-                    </button>
-
-                    {open && (
-                        <div style={{
-                            position: 'absolute',
-                            top: 'calc(100% + 6px)',
-                            left: 0,
-                            right: 0,
-                            background: 'linear-gradient(135deg, #1a1a3e 0%, #0f0c29 100%)',
-                            border: '1px solid rgba(132, 250, 176, 0.35)',
-                            borderRadius: '12px',
-                            zIndex: 500,
-                            maxHeight: '280px',
-                            overflowY: 'auto',
-                            boxShadow: '0 12px 40px rgba(0,0,0,0.5)',
-                            padding: '6px'
-                        }}>
-                            {MEMBERS.map((alias, i) => (
-                                <div
-                                    key={alias}
-                                    onClick={() => pick(alias)}
-                                    style={{
-                                        padding: '11px 14px',
-                                        cursor: 'pointer',
-                                        borderRadius: '8px',
-                                        fontSize: '0.95rem',
-                                        fontWeight: selectedAlias === alias ? '700' : '500',
-                                        color: selectedAlias === alias ? '#84fab0' : 'rgba(255,255,255,0.85)',
-                                        background: selectedAlias === alias ? 'rgba(132,250,176,0.12)' : 'transparent',
-                                        transition: 'all 0.15s ease',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '8px'
-                                    }}
-                                    onMouseEnter={e => { if (selectedAlias !== alias) e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
-                                    onMouseLeave={e => { e.currentTarget.style.background = selectedAlias === alias ? 'rgba(132,250,176,0.12)' : 'transparent'; }}
-                                >
-                                    {selectedAlias === alias && <span style={{ fontSize: '0.7rem' }}>✓</span>}
-                                    {alias}
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                </div>
-            );
-        }
-
         function MemberView({ month, selectedAlias, setSelectedAlias, data, stats, fileLastModified, isCurrentMonth, shouldShowWarnings }) {
             const memberData = data[month]?.[selectedAlias] || {
                 openingBalance: 0,
@@ -2277,7 +2139,14 @@
 
             return (
                 <div className="member-view">
-                    <AliasDropdown selectedAlias={selectedAlias} setSelectedAlias={setSelectedAlias} />
+                    <div className="alias-selector">
+                        <select value={selectedAlias} onChange={(e) => setSelectedAlias(e.target.value)}>
+                            <option value="" disabled>👆 Select your alias to view balance</option>
+                            {MEMBERS.map(alias => (
+                                <option key={alias} value={alias}>{alias}</option>
+                            ))}
+                        </select>
+                    </div>
 
                     {selectedAlias && (
                         <>
